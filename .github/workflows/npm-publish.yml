@@ -3,8 +3,11 @@
 name: Publish Package
 
 on:
-  release:
-    types: [created]
+  workflow_run:
+    workflows: ['Tests']
+    branches: [main]
+    types:
+      - completed
 
 jobs:
   publish-npm:
