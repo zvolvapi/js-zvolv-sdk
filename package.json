@@ -1,0 +1,26 @@
+{
+  "name": "zvolv-sdk",
+  "version": "0.0.1",
+  "description": "Zvolv developer kit for Javascript",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zvolvapi/js-zvolv-sdk.git"
+  },
+  "keywords": [
+    "SDK",
+    "Zvolv",
+    "api",
+    "No-Code/Low-Code",
+    "Hyper-automation"
+  ],
+  "author": "Akshay Jadhav",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/zvolvapi/js-zvolv-sdk/issues"
+  },
+  "homepage": "https://github.com/zvolvapi/js-zvolv-sdk#readme"
+}
