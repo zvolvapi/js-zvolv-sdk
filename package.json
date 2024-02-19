@@ -54,8 +54,11 @@
   },
   "homepage": "https://github.com/zvolvapi/js-zvolv-sdk#readme",
   "devDependencies": {
+    "@types/axios": "^0.14.0",
     "@types/chai": "^4.3.11",
     "@types/mocha": "^10.0.6",
+    "@types/node": "^20.11.19",
+    "axios": "^1.6.7",
     "chai": "^5.1.0",
     "mocha": "^10.3.0",
     "semantic-release": "^23.0.2",

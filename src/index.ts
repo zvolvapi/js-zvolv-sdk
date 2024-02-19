@@ -1,14 +1,23 @@
-export function helloWorld() {
-  const message = "Hello World from my example modern npm package!";
-  return message;
-}
+import axios, { AxiosInstance } from 'axios';
+import AuthModule from './modules/auth';
 
-export function goodBye() {
-  const message = "Goodbye from my example modern npm package!";
-  return message;
-}
+export class ZvolvClient {
+  private httpClient: AxiosInstance;
+  private _auth?: AuthModule;
 
-export default {
-  helloWorld,
-  goodBye,
-};
+  constructor(host: string, domain: string) {
+    this.httpClient = axios.create({
+      baseURL: host,
+      headers: {
+        'domain': domain,
+      },
+    });
+  }
+
+  get auth() {
+    if (!this._auth) {
+      this._auth = new AuthModule(this.httpClient);
+    }
+    return this._auth;
+  }
+}
