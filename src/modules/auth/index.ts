@@ -1,21 +1,41 @@
 import { AxiosInstance } from 'axios';
+import { API_URLS_LEGACY } from '../../helpers/constants';
+import { getClientType } from '../../helpers/client';
+import { sha512 } from 'js-sha512';
+import { LoginResponse } from '../../interfaces/auth.interface';
 
 class AuthModule {
   constructor(private httpClient: AxiosInstance) {}
 
-  async login(username: string, password: string): Promise<any> {
-    // Implement login logic using this.httpClient
-    console.log('username', username);
-    console.log('password', password);
-    console.log('its in login')
+  async login(email: string, password: string): Promise<LoginResponse> {
+    // Implement login logic with legacy PHP backend using this.httpClient
+    try {
+      password = sha512(password);
+      const clientType = getClientType();
+      const headers = {
+        'jwt': true,
+        'device': clientType,
+        'businessDomain': this.httpClient.defaults.headers['domain'],
+        'businessTagId' : "449VZ2DY54AF3"
+      };
+      const response = await this.httpClient.post<LoginResponse>(API_URLS_LEGACY.login, { email, password }, { headers });
+      if (response.status === 200 && response.data.error === false) {
+        const token = response.data.loginToken;
+        // Set the token in the Authorization header for all subsequent requests
+        this.httpClient.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+        return response.data;
+      } else {
+        throw new Error(response.data.message || 'Login failed');
+      }
+    } catch (error) {
+      throw new Error('An error occurred during login');
+    }
   }
 
   async logout(): Promise<any> {
     // Implement logout logic using this.httpClient
     console.log('its in logout')
   }
-
-  // Additional auth methods...
 }
 
 export default AuthModule;
