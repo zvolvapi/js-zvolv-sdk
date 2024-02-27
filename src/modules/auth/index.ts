@@ -3,12 +3,13 @@ import { API_URLS_LEGACY } from '../../helpers/constants';
 import { getClientType } from '../../helpers/client';
 import { sha512 } from 'js-sha512';
 import { User } from '../../interfaces/auth.interface';
+import { Workspace } from '../../interfaces/workspace.interface';
 
 class AuthModule {
 
-  private userInstance: User;
+  public userInstance: User;
 
-  constructor(private httpClient: AxiosInstance) {}
+  constructor(private httpClient: AxiosInstance, private workspaceInstance: Workspace) {}
 
   async login(email: string, password: string): Promise<User> {
     // Implement login logic with legacy PHP backend using this.httpClient
@@ -18,8 +19,8 @@ class AuthModule {
       const headers = {
         'jwt': true,
         'device': clientType,
-        'businessDomain': this.httpClient.defaults.headers['domain'],
-        'businessTagId' : "449VZ2DY54AF3"
+        'businessDomain': this.httpClient.defaults.headers.common['domain'],
+        'businessTagId' : this.workspaceInstance.businessTagId
       };
       const response = await this.httpClient.post(API_URLS_LEGACY.login, { email, password }, { headers });
       if (response.status === 200 && response.data.error === false) {

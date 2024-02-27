@@ -4,3 +4,8 @@ export const API_URLS_LEGACY = {
     logout: '/rest/v17/user/logout',
     workspace: '/rest/v17/organisation/web/config',
 };
+
+// Export API URLs as constants
+export const API_URLS = {
+    analytics_search: '/analytics/search',
+};

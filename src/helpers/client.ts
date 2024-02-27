@@ -11,3 +11,8 @@ export const getClientType: () => "browser" | "server" = () => {
         return 'server';
     }
 }
+
+export const createApiUrl = (path: string): string => { 
+    const route = '/api/v1';
+    return `${route}${path}`;
+}
