@@ -5,7 +5,7 @@ import { Workspace } from '../../interfaces/workspace.interface';
 
 class WorkspaceModule {
 
-  public workspaceInstance: Workspace;
+  public workspaceInstance?: Workspace;
 
   constructor(private httpClient: AxiosInstance) {}
 

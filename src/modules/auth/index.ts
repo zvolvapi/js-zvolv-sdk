@@ -7,7 +7,7 @@ import { Workspace } from '../../interfaces/workspace.interface';
 
 class AuthModule {
 
-  public userInstance: User;
+  public userInstance?: User;
 
   constructor(private httpClient: AxiosInstance, private workspaceInstance: Workspace) {}
 
