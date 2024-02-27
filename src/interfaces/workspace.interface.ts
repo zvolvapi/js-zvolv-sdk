@@ -1,4 +1,4 @@
-export interface WorkspaceResponse {
+export interface Workspace {
     businessTagId:   string;
     businessDomain:   string;
     businessTitle:   string;

@@ -1,5 +1,4 @@
-export interface LoginResponse {
-    error: boolean;
+export interface User {
     loginToken: string;
     userId:   number;
     name:   string;

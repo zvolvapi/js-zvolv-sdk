@@ -4,7 +4,7 @@ import WorkspaceModule from './modules/workspace';
 
 export class ZvolvClient {
   private httpClient: AxiosInstance;
-  private _workspace?: any;
+  private _workspace?: WorkspaceModule;
   private _auth?: AuthModule;
 
   constructor(host: string) {
@@ -21,6 +21,11 @@ export class ZvolvClient {
   }
 
   get auth() {
+    // Check if workspace is initialized 
+    if (!this._workspace?.workspaceInstance) {
+      throw new Error('Workspace not initialized! Please use workspace.init() before calling auth methods');
+    }
+
     if (!this._auth) {
       this._auth = new AuthModule(this.httpClient);
     }

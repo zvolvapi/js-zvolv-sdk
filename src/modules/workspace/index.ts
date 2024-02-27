@@ -1,12 +1,15 @@
 import { AxiosInstance } from 'axios';
 import { API_URLS_LEGACY } from '../../helpers/constants';
 import { getClientType } from '../../helpers/client';
-import { WorkspaceResponse } from '../../interfaces/workspace.interface';
+import { Workspace } from '../../interfaces/workspace.interface';
 
 class WorkspaceModule {
+
+  public workspaceInstance: Workspace;
+
   constructor(private httpClient: AxiosInstance) {}
 
-  async init(domain: string): Promise<WorkspaceResponse> {
+  async init(domain: string): Promise<Workspace> {
     // Implement get business configuration logic with legacy PHP backend using this.httpClient
     try {
       const clientType = getClientType();
@@ -16,7 +19,7 @@ class WorkspaceModule {
       const url = `${API_URLS_LEGACY.workspace}/${domain}`;
       const response = await this.httpClient.get(url, { headers });
       if (response.status === 200 && response.data.error === false) {
-        const workspace: WorkspaceResponse = {
+        const workspace: Workspace = {
           businessTagId: response.data.data.BUSINESS_TAG_ID,
           businessDomain: response.data.data.BUSINESS_DOMAIN,
           businessTitle: response.data.data.LOGO_TEXT,
@@ -34,6 +37,7 @@ class WorkspaceModule {
           workspace.onlyOTPLogin = response.data.data.APP_CONFIG.OTP_LOGIN ? response.data.data.APP_CONFIG.OTP_LOGIN : false;
         }
 
+        this.workspaceInstance = workspace;
         return workspace;
       } else {
         throw new Error(response.data.message || 'Initialization failed');
