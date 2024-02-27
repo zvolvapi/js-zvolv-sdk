@@ -2,4 +2,5 @@
 export const API_URLS_LEGACY = {
     login: '/rest/v17/user/login',
     logout: '/rest/v17/user/logout',
+    workspace: '/rest/v17/organisation/web/config',
 };

@@ -5,5 +5,6 @@ export interface LoginResponse {
     name:   string;
     email:   string;
     userGroupId?: number;
+    sharedToken?:string
     message?: string; // Optional message field for errors or additional info
-  }
+}
