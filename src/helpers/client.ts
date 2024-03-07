@@ -12,7 +12,38 @@ export const getClientType: () => "browser" | "server" = () => {
     }
 }
 
-export const createApiUrl = (path: string): string => { 
+// export const createApiUrl = (path: string): string => { 
+//     const route = '/api/v1';
+//     return `${route}${path}`;
+// }
+
+export const createApiUrl = (path: string, queryParams?: Record<string, any>): string => {
     const route = '/api/v1';
-    return `${route}${path}`;
+    let url = `${route}${path}`;
+    // console.log("path",path ,"queryParams",queryParams)
+    // Replace placeholders in the path with actual values
+    if (queryParams) {
+        Object.keys(queryParams).forEach(key => {
+            url = url.replace(`:${key}`, queryParams[key]);
+            //console.log("url1",url)
+        });
+    }
+
+    // Append query parameters if provided
+    if (queryParams) {
+        const queryString = Object.keys(queryParams)
+            .filter(key => !path.includes(`:${key}`)) // Exclude replaced placeholders from query params
+            .map(key => {
+                const encodedKey = encodeURIComponent(key);
+                const encodedValue = encodeURIComponent(queryParams[key]);
+                return `${encodedKey}=${encodedValue}`;
+            }).join('&');
+
+        if (queryString) {
+            url += `?${queryString}`;
+            // console.log("url2",url)
+        }
+    }
+    console.log("Constructed URL:", url);
+    return url;
 }

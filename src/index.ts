@@ -2,12 +2,16 @@ import axios, { AxiosInstance } from 'axios';
 import AuthModule from './modules/auth';
 import WorkspaceModule from './modules/workspace';
 import AnalyticsModule from './modules/analytics';
+import FormModule from './modules/forms';
+import SubmissionModule from './modules/submissions';
 
 export class ZvolvClient {
   private httpClient: AxiosInstance;
   private _workspace?: WorkspaceModule;
   private _auth?: AuthModule;
   private _analytics?: AnalyticsModule;
+  private _form?: FormModule;
+  private _submission?: SubmissionModule;
 
   constructor(host: string) {
     this.httpClient = axios.create({
@@ -44,6 +48,22 @@ export class ZvolvClient {
     return this._analytics;
   }
 
+  get form() {
+    this.validate();
+    if (!this._form) {
+      this._form = new FormModule(this.httpClient);
+    }
+    return this._form;
+  }
+
+  get submission() {
+    this.validate();
+
+    if (!this._submission) {
+      this._submission = new SubmissionModule(this.httpClient);
+    }
+    return this._submission;
+  }
 
   // Validate if workspace and user are initialized
   validate() {
