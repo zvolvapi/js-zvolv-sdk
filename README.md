@@ -11,7 +11,6 @@ tsx --no-cache ./sample.ts  -->
 
 # ZvolvClient SDK
 
-
 ZvolvClient SDK is a JavaScript Software Development Kit for interacting with the Zvolv API.
 
 
