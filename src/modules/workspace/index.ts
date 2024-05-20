@@ -12,7 +12,7 @@ class WorkspaceModule {
   async init(domain: string): Promise<Workspace> {
     try {
       // Set the domain in the headers for all subsequent requests
-      this.httpClient.defaults.headers.common['domain'] = domain;
+      // this.httpClient.defaults.headers.common['domain'] = domain;
 
       // Get business configuration with legacy PHP backend using this.httpClient
       const clientType = getClientType();
