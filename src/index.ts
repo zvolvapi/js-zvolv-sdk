@@ -4,6 +4,7 @@ import WorkspaceModule from './modules/workspace';
 import AnalyticsModule from './modules/analytics';
 import FormModule from './modules/forms';
 import SubmissionModule from './modules/submissions';
+import WorkflowModule from './modules/workflows';
 
 export class ZvolvClient {
   private httpClient: AxiosInstance;
@@ -12,6 +13,7 @@ export class ZvolvClient {
   private _analytics?: AnalyticsModule;
   private _form?: FormModule;
   private _submission?: SubmissionModule;
+  private _workflow?: WorkflowModule;
 
   constructor(host: string) {
     this.httpClient = axios.create({
@@ -28,12 +30,12 @@ export class ZvolvClient {
 
   get auth() {
     // Check if workspace is initialized 
-    if (!this._workspace?.workspaceInstance) {
-      throw new Error('Workspace not initialized! Please use workspace.init() before calling auth methods');
+    if (!this._workspace?.workspaceInstance && !this._workspace?.workspaceInstanceV2) {
+      throw new Error('Workspace not initialized! Please use workspace.init() or workspace.initV2() before calling auth methods');
     }
 
     if (!this._auth) {
-      this._auth = new AuthModule(this.httpClient, this._workspace.workspaceInstance);
+      this._auth = new AuthModule(this.httpClient, this._workspace?.workspaceInstance, this._workspace?.workspaceInstanceV2);
     }
     return this._auth;
   }
@@ -63,6 +65,13 @@ export class ZvolvClient {
       this._submission = new SubmissionModule(this.httpClient);
     }
     return this._submission;
+  }
+
+  get workflow() {
+    if (!this._workflow) {
+      this._workflow = new WorkflowModule(this.httpClient, this._workspace?.workspaceInstanceV2);
+    }
+    return this._workflow;
   }
 
   // Validate if workspace and user are initialized

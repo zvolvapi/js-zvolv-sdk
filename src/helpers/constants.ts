@@ -8,6 +8,9 @@ export const API_URLS_LEGACY = {
 // Export API URLs as constants
 export const API_URLS = {
     analytics_search: '/analytics/search',
-    create_submission:'/submissions',
-    fetch_form:'/forms/:id'
+    create_submission: '/submissions',
+    fetch_form: '/forms/:id',
+    config: '/organisation/web/config/',
+    login: '/user/login',
+    get_all_widgets: '/analytics/reports/get'
 };
