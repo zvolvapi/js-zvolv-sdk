@@ -1,9 +1,10 @@
-import axios, { AxiosInstance } from 'axios';
-import AuthModule from './modules/auth';
-import WorkspaceModule from './modules/workspace';
-import AnalyticsModule from './modules/analytics';
-import FormModule from './modules/forms';
-import SubmissionModule from './modules/submissions';
+import axios, { AxiosInstance } from "axios";
+import AuthModule from "./modules/auth";
+import WorkspaceModule from "./modules/workspace";
+import AnalyticsModule from "./modules/analytics";
+import FormModule from "./modules/forms";
+import SubmissionModule from "./modules/submissions";
+import WorkflowModule from "./modules/workflow";
 
 export class ZvolvClient {
   private httpClient: AxiosInstance;
@@ -12,10 +13,11 @@ export class ZvolvClient {
   private _analytics?: AnalyticsModule;
   private _form?: FormModule;
   private _submission?: SubmissionModule;
+  private _workflow?: WorkflowModule;
 
-  constructor(host: string) {
+  constructor(host: string, ssl?: boolean) {
     this.httpClient = axios.create({
-      baseURL: host
+      baseURL: `${ssl ? "https" : "http"}://${host}`,
     });
   }
 
@@ -27,13 +29,18 @@ export class ZvolvClient {
   }
 
   get auth() {
-    // Check if workspace is initialized 
+    // Check if workspace is initialized
     if (!this._workspace?.workspaceInstance) {
-      throw new Error('Workspace not initialized! Please use workspace.init() before calling auth methods');
+      throw new Error(
+        "Workspace not initialized! Please use workspace.init() before calling auth methods"
+      );
     }
 
     if (!this._auth) {
-      this._auth = new AuthModule(this.httpClient, this._workspace.workspaceInstance);
+      this._auth = new AuthModule(
+        this.httpClient,
+        this._workspace.workspaceInstance
+      );
     }
     return this._auth;
   }
@@ -65,16 +72,49 @@ export class ZvolvClient {
     return this._submission;
   }
 
+  get workflow() {
+    // this.validate().then((userInstance) => {
+    if (!this._workflow) {
+      this._workflow = new WorkflowModule(
+        this.httpClient,
+        this._workspace?.workspaceInstance,
+        this.auth
+      );
+    }
+    return this._workflow;
+    // });
+  }
+
   // Validate if workspace and user are initialized
   validate() {
-    // Check if workspace is initialized 
+    // Check if workspace is initialized
     if (!this._workspace?.workspaceInstance) {
-      throw new Error('Workspace not initialized! Please use workspace.init() before calling auth methods');
+      throw new Error(
+        "Workspace not initialized! Please use workspace.init() before calling auth methods"
+      );
     }
+    let authInstance;
+    this._auth?.init().then(() => {
+      // Check if user is logged in
+      if (!this._auth?.userInstance) {
+        throw new Error(
+          "User not logged in! Please use auth.login() before calling analytics methods"
+        );
+      }
 
-    // Check if user is logged in
-    if (!this._auth?.userInstance) {
-      throw new Error('User not logged in! Please use auth.login() before calling analytics methods');
-    }
+      this.httpClient.interceptors.response.use((response) => {
+        if (response.data.error && response.data.error_code === 3) {
+          if (this._auth) {
+            this._auth.userInstance = undefined;
+          }
+          localStorage.clear();
+          window.location.reload();
+        }
+        return response;
+      });
+
+      authInstance = this._auth?.userInstance;
+    });
+    return authInstance;
   }
 }
