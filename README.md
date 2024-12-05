@@ -34,7 +34,7 @@ Initializes the ZvolvClient with the base URL of the Zvolv server.
 
 Once the package is installed, you can import the library using import or require approach:
 
-```bash
+```javascript
 import { ZvolvClient } from "zvolv-client-sdk";
 
 const client = new ZvolvClient('http://twig-me.com');
