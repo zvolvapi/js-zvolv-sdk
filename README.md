@@ -45,7 +45,7 @@ const client = new ZvolvClient('http://twig-me.com');
 
 methods for interacting with workspaces.
 
-```bash
+```javascript
 
 try {
     const workspace = await client.workspace.init('kapilwf');
@@ -58,7 +58,7 @@ try {
 
 methods for authentication.
 
-```bash
+```javascript
 try {
     const login = await client.auth.login('email', 'pass');
 } catch (error) {
@@ -68,7 +68,7 @@ try {
 ## Perform Analytics Search
 methods for performing analytics-related operations.
 
-```bash
+```javascript
 try {
     const analytics = await client.analytics.search('65c470f6dab3102c930725ca', { query: { match_all: {} }, from: 0, size: 20, track_total_hits: true });
 } catch (error) {
@@ -80,7 +80,7 @@ try {
 
 methods for fetching form details.
 
-```bash
+```javascript
 try {
     const formId = '65c470f6dab3102c930725ca'; // Replace with the appropriate form ID
     const form = await client.form.fetch(formId);
@@ -96,7 +96,7 @@ Define query parameters for the submission creation request.
 
 If not provided, default values of false will be used for skipAutomation and skipValidations.
 
-```bash
+```javascript
 try {
     const submissionData = {
         formId: '65c470f6dab3102c930725ca', // Replace with the appropriate formId
