@@ -42,7 +42,7 @@ class AuthModule {
     }
   }
 
-  async init() {
+  init() {
     if (localStorage.getItem("user")) {
       this.userInstance = JSON.parse(localStorage.getItem("user") as string);
     }

@@ -73,6 +73,7 @@ export class ZvolvClient {
   }
 
   get workflow() {
+    this.validate();
     // this.validate().then((userInstance) => {
     if (!this._workflow) {
       this._workflow = new WorkflowModule(
@@ -93,28 +94,26 @@ export class ZvolvClient {
         "Workspace not initialized! Please use workspace.init() before calling auth methods"
       );
     }
-    let authInstance;
-    this._auth?.init().then(() => {
-      // Check if user is logged in
-      if (!this._auth?.userInstance) {
+    let authInstance = this._auth?.userInstance || this.auth.userInstance;
+
+    if (!authInstance) {
+      this._auth?.init();
+      authInstance = this._auth?.userInstance || this.auth.userInstance;
+      if (!authInstance) {
         throw new Error(
-          "User not logged in! Please use auth.login() before calling analytics methods"
+          "User not initialized! Please use auth.login() before calling other methods"
         );
       }
-
-      this.httpClient.interceptors.response.use((response) => {
-        if (response.data.error && response.data.error_code === 3) {
-          if (this._auth) {
-            this._auth.userInstance = undefined;
-          }
-          localStorage.clear();
-          window.location.reload();
+    }
+    this.httpClient.interceptors.response.use((response) => {
+      if (response.data.error && response.data.error_code === 3) {
+        if (this._auth) {
+          this._auth.userInstance = undefined;
         }
-        return response;
-      });
-
-      authInstance = this._auth?.userInstance;
+        localStorage.clear();
+        window.location.reload();
+      }
+      return response;
     });
-    return authInstance;
   }
 }
