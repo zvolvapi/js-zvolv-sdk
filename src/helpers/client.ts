@@ -19,7 +19,10 @@ export const getClientType: () => "browser" | "server" = () => {
 
 export const createApiUrl = (path: string, queryParams?: Record<string, any>): string => {
     const route = '/api/v1';
-    let url = `${route}${path}`;
+    let url: any = path
+    if (path.indexOf('rest/v17') === -1) {
+        url = `${route}${path}`
+    }
     // console.log("path",path ,"queryParams",queryParams)
     // Replace placeholders in the path with actual values
     if (queryParams) {
