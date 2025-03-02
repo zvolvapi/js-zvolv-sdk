@@ -19,7 +19,10 @@ export const getClientType: () => "browser" | "server" = () => {
 
 export const createApiUrl = (path: string, queryParams?: Record<string, any>): string => {
     const route = '/api/v1';
-    let url = `${route}${path}`;
+    let url: any = path
+    if (path.indexOf('rest/v17') === -1) {
+        url = `${route}${path}`
+    }
     // console.log("path",path ,"queryParams",queryParams)
     // Replace placeholders in the path with actual values
     if (queryParams) {
@@ -46,4 +49,14 @@ export const createApiUrl = (path: string, queryParams?: Record<string, any>): s
     }
     console.log("Constructed URL:", url);
     return url;
+}
+
+export const getParsedLocalStorageItem = (key: string, defaultValue: any) => {
+    try {
+      const item = localStorage.getItem(key);
+      return item ? JSON.parse(item) : defaultValue;
+    } catch (error) {
+      console.error(`Error parsing localStorage item for key "${key}":`, error);
+      return defaultValue;
+    }
 }

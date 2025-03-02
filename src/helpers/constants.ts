@@ -5,6 +5,10 @@ export const API_URLS_LEGACY = {
   workspace: "/rest/v17/organisation/web/config",
   workflow: "/rest/v17/workflow",
   all_dashboards: "/rest/v17/analytics/reports/get",
+  search_users: '/rest/v17/search/users',
+  get_usergroups_url: '/rest/v17/usergroups/:businessTagId',
+  get_data_source: '/rest/v17/workflow/:businessTagId/widget/:widgetId',
+  edit_analytics_report_widget: '/rest/v17/analytics/reports/widget/edit/:WidgetID',
 };
 
 // Export API URLs as constants
@@ -13,4 +17,21 @@ export const API_URLS = {
   create_submission: "/submissions",
   fetch_form: "/forms/:id",
   elastic_search: "/api/v1/analytics/search",
+  field_unique_values: '/api/v1/analytics/values/unique',
+};
+
+export const appVariables = {
+  loginToken: 'loginToken',
+  businessTagID: 'businessTagId',
+  businessDomain: 'businessDomain',
+  systemSubDomain: 'app',
+  errorSubDomain: 'error',
+  resourceAccessLocalStorage: 'resourceAccessRaw',
+  accessTokenServer: 'X-Auth-Token',
+  defaultContentTypeHeader: 'application/json',
+  errorInputClass: 'has-error',
+  successInputClass: 'has-success',
+  ng2SlimLoadingBarColor: 'red',
+  ng2SlimLoadingBarHeight: '4px',
+  accessTokenLocalStorage: 'accessToken',
 };
