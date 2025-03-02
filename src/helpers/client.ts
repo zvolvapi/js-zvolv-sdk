@@ -47,7 +47,6 @@ export const createApiUrl = (path: string, queryParams?: Record<string, any>): s
             // console.log("url2",url)
         }
     }
-    console.log("Constructed URL:", url);
     return url;
 }
 
