@@ -1,6 +1,6 @@
 import { AxiosInstance } from "axios";
 import { API_URLS_LEGACY } from "../../helpers/constants";
-import { getClientType } from "../../helpers/client";
+import { getClientType, getParsedLocalStorageItem } from "../../helpers/client";
 import { sha512 } from "js-sha512";
 import { User } from "../../interfaces/auth.interface";
 import { Workspace } from "../../interfaces/workspace.interface";
@@ -32,6 +32,9 @@ class AuthModule {
       if (response.status === 200 && response.data.error === false) {
         this.userInstance = response.data;
         localStorage.setItem("user", JSON.stringify(response.data));
+        let AkitaStores = getParsedLocalStorageItem('AkitaStores', {})
+        AkitaStores['auth'] = response.data
+        localStorage.setItem("AkitaStores", JSON.stringify(AkitaStores));
         this.setToken();
         return response.data;
       } else {
