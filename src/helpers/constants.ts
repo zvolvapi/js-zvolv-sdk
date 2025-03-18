@@ -18,6 +18,8 @@ export const API_URLS = {
   fetch_form: "/forms/:id",
   elastic_search: "/api/v1/analytics/search",
   field_unique_values: '/api/v1/analytics/values/unique',
+  get_zai_agents: '/zwall/zai_agent/',
+  zai_agent_capability: '/zwall/zai_agent_capability/:id',
 };
 
 export const appVariables = {

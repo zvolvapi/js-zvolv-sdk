@@ -109,6 +109,17 @@ class WorkflowModule {
   async downloadDossier(url: string) {
     return this.handleRequest("get", url);
   }
+
+  async getZaiAgent(): Promise<Form> {
+    const url = createApiUrl(API_URLS.get_zai_agents);
+    return this.handleRequest("get", url, undefined, true);
+  }
+
+  async getZaiAgentCap(id: string): Promise<Form> {
+    const url = createApiUrl(API_URLS.zai_agent_capability, { id: id } );
+    return this.handleRequest("get", url, undefined, true);
+  }
+
 }
 
 export default WorkflowModule;
