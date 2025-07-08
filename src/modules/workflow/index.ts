@@ -42,7 +42,7 @@ class WorkflowModule {
         data,
         headers: await this.getHeaders(authRequired),
       });
-      if (response.status === 200 && response.data.error === false) {
+      if ((response.status === 200 || response.status === 201) && response.data.error === false) {
         return response.data.data || response.data;
       }
       throw new Error("Error fetching data");
@@ -109,6 +109,26 @@ class WorkflowModule {
   async downloadDossier(url: string) {
     return this.handleRequest("get", url);
   }
+
+  async getSubmissionAll(formId: any, skip: any, limit: any, sort: any, elementFilter: any, filters: any, filterOperator:any = null) {
+    const body = {
+        skip: skip,
+        limit: limit,
+        sort: sort,
+        elementFilter: elementFilter,
+        filter: filters,
+        filterOperator: filterOperator
+    }
+    let url = API_URLS.submissiog_rpc_all;
+    url = url.replace(new RegExp(`:${appVariables.submissionTagId}`, "g"), formId);
+    return this.handleRequest("post", url, body, true);
+  }
+
+  async updateSubmission(formId: string, body: string) {
+    let url = createApiUrl(API_URLS.update_submission, { id: formId });
+    return this.handleRequest("put", url, JSON.parse(body), true);
+  }
+
 }
 
 export default WorkflowModule;

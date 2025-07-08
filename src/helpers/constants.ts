@@ -18,11 +18,14 @@ export const API_URLS = {
   fetch_form: "/forms/:id",
   elastic_search: "/api/v1/analytics/search",
   field_unique_values: '/api/v1/analytics/values/unique',
+  submissiog_rpc_all: '/api/v1/submissions/:submissionId/find/all',
+  update_submission: '/submissions/:id'
 };
 
 export const appVariables = {
   loginToken: 'loginToken',
   businessTagID: 'businessTagId',
+  submissionTagId: 'submissionId',
   businessDomain: 'businessDomain',
   systemSubDomain: 'app',
   errorSubDomain: 'error',
