@@ -1,7 +1,7 @@
 export interface Workspace {
     businessTagId:   string;
     businessDomain:   string;
-    businessTitle:   string;
+    businessTitle: { colored:  string;};
     logoUrl:   string;
     faviconUrl:   string;
     primaryColor:   string;

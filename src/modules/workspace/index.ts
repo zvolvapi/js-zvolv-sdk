@@ -21,7 +21,17 @@ class WorkspaceModule {
           localStorage.getItem("workspace") as string
         );
         this.workspaceInstance = workspace;
-        document.title = workspace.businessDomain + " | Zvolv";
+        document.title = workspace.businessTitle?.colored || workspace.businessDomain || '';
+        const faviconUrl = workspace.faviconUrl;
+        if (faviconUrl) {
+          let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+          }
+          link.href = faviconUrl;
+        }
         if (domain === workspace.businessDomain) return workspace;
         else localStorage.removeItem("workspace");
       }
@@ -56,7 +66,17 @@ class WorkspaceModule {
 
         this.workspaceInstance = workspace;
         localStorage.setItem("workspace", JSON.stringify(workspace));
-        document.title = workspace.businessDomain + " | Zvolv";
+        document.title = workspace.businessTitle?.colored || workspace.businessDomain || 'Zvolv';
+        const faviconUrl = workspace.faviconUrl;
+        if (faviconUrl) {
+          let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
+          if (!link) {
+            link = document.createElement('link');
+            link.rel = 'icon';
+            document.head.appendChild(link);
+          }
+          link.href = faviconUrl;
+        }
         return workspace;
       } else {
         throw new Error(response.data.message || "Initialization failed");
