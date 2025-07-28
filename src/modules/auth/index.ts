@@ -58,8 +58,6 @@ class AuthModule {
     this.httpClient.defaults.headers.common[
       "Authorization"
     ] = `Bearer ${this.userInstance?.loginToken}`;
-    this.httpClient.defaults.headers.common["Jwt"] =
-      this.userInstance?.loginToken;
   }
 
   async logout(): Promise<any> {

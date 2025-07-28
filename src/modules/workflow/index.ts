@@ -12,26 +12,24 @@ class WorkflowModule {
     private auth?: AuthModule
   ) {}
 
-  private async getHeaders(authRequired = false) {
-    if (authRequired && this.auth && !this.auth?.userInstance) {
+  private async getHeaders(authRequired = false): Promise<Record<string, any>> {
+    // Ensure auth is initialized if required
+    if (authRequired && this.auth && !this.auth.userInstance) {
       await this.auth.init();
     }
-    if(authRequired){
-      delete this.httpClient.defaults.headers.common["Jwt"];
-    }else{
-      this.httpClient.defaults.headers.common["Jwt"] = this.auth?.userInstance?.loginToken
+
+    const headers: Record<string, any> = {};
+
+    if (authRequired && this.auth?.userInstance?.loginToken) {
+      headers.Authorization = `Bearer ${this.auth.userInstance.loginToken}`;
+      headers.domain = this.workspaceInstance?.businessDomain;
+    } else if (this.auth?.userInstance?.loginToken) {
+      headers.jwt = this.auth.userInstance.loginToken;
+      headers.businessDomain = this.workspaceInstance?.businessDomain;
+      headers.device = getClientType();
+      headers.businessTagId = this.workspaceInstance?.businessTagId;
     }
-    return {
-      ...(!authRequired && {
-        device: getClientType(),
-        businessDomain: this.workspaceInstance?.businessDomain,
-        businessTagId: this.workspaceInstance?.businessTagId,
-      }),
-      ...(authRequired && this.auth?.userInstance && {
-        Authorization: `Bearer ${this.auth.userInstance.loginToken}`,
-        Domain: this.workspaceInstance?.businessDomain
-      }),
-    };
+    return headers;
   }
 
   private async handleRequest(method: string, url: string, data?: any, authRequired = false) {
@@ -127,6 +125,10 @@ class WorkflowModule {
   async updateSubmission(formId: string, body: string) {
     let url = createApiUrl(API_URLS.update_submission, { id: formId });
     return this.handleRequest("put", url, JSON.parse(body), true);
+  }
+
+  async getAuthData() {
+    return this.handleRequest("get", API_URLS_LEGACY.authData, undefined, false)
   }
 
 }

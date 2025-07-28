@@ -9,6 +9,7 @@ export const API_URLS_LEGACY = {
   get_usergroups_url: '/rest/v17/usergroups/:businessTagId',
   get_data_source: '/rest/v17/workflow/:businessTagId/widget/:widgetId',
   edit_analytics_report_widget: '/rest/v17/analytics/reports/widget/edit/:WidgetID',
+  authData: '/rest/v17/organisation/auth/data',
 };
 
 // Export API URLs as constants
@@ -19,7 +20,7 @@ export const API_URLS = {
   elastic_search: "/api/v1/analytics/search",
   field_unique_values: '/api/v1/analytics/values/unique',
   submissiog_rpc_all: '/api/v1/submissions/:submissionId/find/all',
-  update_submission: '/submissions/:id'
+  update_submission: '/submissions/:id',
 };
 
 export const appVariables = {
