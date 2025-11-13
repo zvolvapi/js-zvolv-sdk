@@ -5,6 +5,7 @@ import AnalyticsModule from "./modules/analytics";
 import FormModule from "./modules/forms";
 import SubmissionModule from "./modules/submissions";
 import WorkflowModule from "./modules/workflow";
+import ZaiServicesModule from "./modules/zai";
 
 export class ZvolvClient {
   private httpClient: AxiosInstance;
@@ -14,6 +15,7 @@ export class ZvolvClient {
   private _form?: FormModule;
   private _submission?: SubmissionModule;
   private _workflow?: WorkflowModule;
+  private _zaiServices?: ZaiServicesModule;
 
   constructor(host: string, ssl?: boolean) {
     this.httpClient = axios.create({
@@ -84,6 +86,18 @@ export class ZvolvClient {
     }
     return this._workflow;
     // });
+  }
+
+  get zaiServices() {
+    this.validate();
+    if (!this._zaiServices) {
+      this._zaiServices = new ZaiServicesModule(
+        this.httpClient,
+        this._workspace?.workspaceInstance,
+        this.auth
+      );
+    }
+    return this._zaiServices;
   }
 
   // Validate if workspace and user are initialized

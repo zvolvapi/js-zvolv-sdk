@@ -1,7 +1,11 @@
 import { AxiosInstance } from "axios";
 import { createApiUrl, getClientType } from "../../helpers/client";
 import { Workspace } from "../../interfaces/workspace.interface";
-import { API_URLS, API_URLS_LEGACY, appVariables } from "../../helpers/constants";
+import {
+  API_URLS,
+  API_URLS_LEGACY,
+  appVariables,
+} from "../../helpers/constants";
 import AuthModule from "../auth";
 import { Form } from "../../interfaces/form.interface";
 
@@ -32,7 +36,12 @@ class WorkflowModule {
     return headers;
   }
 
-  private async handleRequest(method: string, url: string, data?: any, authRequired = false) {
+  private async handleRequest(
+    method: string,
+    url: string,
+    data?: any,
+    authRequired = false
+  ) {
     try {
       const response = await this.httpClient.request({
         method,
@@ -40,7 +49,10 @@ class WorkflowModule {
         data,
         headers: await this.getHeaders(authRequired),
       });
-      if ((response.status === 200 || response.status === 201) && response.data.error === false) {
+      if (
+        (response.status === 200 || response.status === 201) &&
+        response.data.error === false
+      ) {
         return response.data.data || response.data;
       }
       throw new Error("Error fetching data");
@@ -56,27 +68,46 @@ class WorkflowModule {
   }
 
   async getDashboards(id: string) {
-    const url = `${API_URLS_LEGACY.all_dashboards}?filter=${encodeURIComponent(JSON.stringify({ WorkflowTypeID: id, Type: "DASHBOARD" }))}`;
+    const url = `${API_URLS_LEGACY.all_dashboards}?filter=${encodeURIComponent(
+      JSON.stringify({ WorkflowTypeID: id, Type: "DASHBOARD" })
+    )}`;
     return this.handleRequest("get", url);
   }
 
   async getDashboard(id: string, zappId: string) {
-    const url = `${API_URLS_LEGACY.all_dashboards}/${id}?filter=${encodeURIComponent(JSON.stringify({ WorkflowTypeID: zappId, Type: "DASHBOARD" }))}`;
+    const url = `${
+      API_URLS_LEGACY.all_dashboards
+    }/${id}?filter=${encodeURIComponent(
+      JSON.stringify({ WorkflowTypeID: zappId, Type: "DASHBOARD" })
+    )}`;
     return this.handleRequest("get", url);
   }
 
   async elasticSearch(query: any) {
-    return this.handleRequest("post", API_URLS.elastic_search, JSON.parse(query?.toString() || "{}"), true);
+    return this.handleRequest(
+      "post",
+      API_URLS.elastic_search,
+      JSON.parse(query?.toString() || "{}"),
+      true
+    );
   }
 
   async getFieldDistinctValues(input: any) {
-    return this.handleRequest("post", API_URLS.field_unique_values, JSON.parse(input), true);
+    return this.handleRequest(
+      "post",
+      API_URLS.field_unique_values,
+      JSON.parse(input),
+      true
+    );
   }
 
   async getDataSource(input: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.get_data_source, JSON.parse(input));
-    url = url.replace(new RegExp(`:${appVariables.businessTagID}`, "g"), this.workspaceInstance?.businessTagId);
+    url = url.replace(
+      new RegExp(`:${appVariables.businessTagID}`, "g"),
+      this.workspaceInstance?.businessTagId
+    );
     return this.handleRequest("get", url, undefined, true);
   }
 
@@ -88,19 +119,30 @@ class WorkflowModule {
   async getUserGroup(filter: string): Promise<Form> {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.get_usergroups_url, { filter });
-    url = url.replace(new RegExp(`:${appVariables.businessTagID}`, "g"), this.workspaceInstance?.businessTagId);
+    url = url.replace(
+      new RegExp(`:${appVariables.businessTagID}`, "g"),
+      this.workspaceInstance?.businessTagId
+    );
     return this.handleRequest("get", url, undefined, true);
   }
 
   async searchMembers(body: string): Promise<Form> {
-    const url = createApiUrl(API_URLS_LEGACY.search_users, { filters: JSON.stringify({ HideSpecialUserGroups: true }) });
+    const url = createApiUrl(API_URLS_LEGACY.search_users, {
+      filters: JSON.stringify({ HideSpecialUserGroups: true }),
+    });
     return this.handleRequest("post", url, JSON.parse(body), true);
   }
 
   async putWidget(input: any, body: any): Promise<any> {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
-    let url = createApiUrl(API_URLS_LEGACY.edit_analytics_report_widget, JSON.parse(input));
-    url = url.replace(new RegExp(`:${appVariables.businessTagID}`, "g"), this.workspaceInstance?.businessTagId);
+    let url = createApiUrl(
+      API_URLS_LEGACY.edit_analytics_report_widget,
+      JSON.parse(input)
+    );
+    url = url.replace(
+      new RegExp(`:${appVariables.businessTagID}`, "g"),
+      this.workspaceInstance?.businessTagId
+    );
     return this.handleRequest("put", url, JSON.parse(body), true);
   }
 
@@ -108,17 +150,28 @@ class WorkflowModule {
     return this.handleRequest("get", url);
   }
 
-  async getSubmissionAll(formId: any, skip: any, limit: any, sort: any, elementFilter: any, filters: any, filterOperator:any = null) {
+  async getSubmissionAll(
+    formId: any,
+    skip: any,
+    limit: any,
+    sort: any,
+    elementFilter: any,
+    filters: any,
+    filterOperator: any = null
+  ) {
     const body = {
-        skip: skip,
-        limit: limit,
-        sort: sort,
-        elementFilter: elementFilter,
-        filter: filters,
-        filterOperator: filterOperator
-    }
+      skip: skip,
+      limit: limit,
+      sort: sort,
+      elementFilter: elementFilter,
+      filter: filters,
+      filterOperator: filterOperator,
+    };
     let url = API_URLS.submissiog_rpc_all;
-    url = url.replace(new RegExp(`:${appVariables.submissionTagId}`, "g"), formId);
+    url = url.replace(
+      new RegExp(`:${appVariables.submissionTagId}`, "g"),
+      formId
+    );
     return this.handleRequest("post", url, body, true);
   }
 
@@ -128,9 +181,23 @@ class WorkflowModule {
   }
 
   async getAuthData() {
-    return this.handleRequest("get", API_URLS_LEGACY.authData, undefined, false)
+    return this.handleRequest(
+      "get",
+      API_URLS_LEGACY.authData,
+      undefined,
+      false
+    );
   }
 
+  async getUserGroupList(body: any): Promise<Form> {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.get_user_list, {});
+    url = url.replace(
+      new RegExp(`:${appVariables.businessTagID}`, "g"),
+      this.workspaceInstance?.businessTagId
+    );
+    return this.handleRequest("post", url, JSON.parse(body));
+  }
 }
 
 export default WorkflowModule;

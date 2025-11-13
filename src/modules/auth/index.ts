@@ -32,7 +32,7 @@ class AuthModule {
       if (response.status === 200 && response.data.error === false) {
         this.userInstance = response.data;
         localStorage.setItem("user", JSON.stringify(response.data));
-        let AkitaStores = getParsedLocalStorageItem('AkitaStores', {})
+        let AkitaStores = getParsedLocalStorageItem('AkitaStores', {}) as Record<string, any>
         AkitaStores['auth'] = response.data
         localStorage.setItem("AkitaStores", JSON.stringify(AkitaStores));
         this.setToken();
