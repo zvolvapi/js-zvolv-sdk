@@ -1,3 +1,5 @@
+import { report } from "process";
+
 // Export legacy API URLs as constants
 export const API_URLS_LEGACY = {
   login: "/rest/v17/user/login",
@@ -5,9 +7,14 @@ export const API_URLS_LEGACY = {
   workspace: "/rest/v17/organisation/web/config",
   workflow: "/rest/v17/workflow",
   all_dashboards: "/rest/v17/analytics/reports/get",
+  add_dashboard: "/rest/v17/analytics/reports/add",
+  add_widget: "/rest/v17/analytics/reports/:reportId/widgets/add",
+  delete_widget: "/rest/v17/analytics/reports/:reportId/widgets/delete/:WidgetID",
+  update_widget: "/rest/v17/analytics/reports/:reportId/widgets/update/:WidgetID",
+  bulk_add_widget: "/rest/v17/analytics/reports/:reportId/widgets/bulkadd",
   search_users: '/rest/v17/search/users',
   get_usergroups_url: '/rest/v17/usergroups/:businessTagId',
-  get_data_source: '/rest/v17/workflow/:businessTagId/widget/:widgetId',
+  get_data_source: '/rest/v17/workflow/:businessTagId/widget/:WidgetID',
   edit_analytics_report_widget: '/rest/v17/analytics/reports/widget/edit/:WidgetID',
   authData: '/rest/v17/organisation/auth/data',
   get_user_list: '/rest/v17/usergroups/autosearch/:businessTagId'
@@ -38,7 +45,9 @@ export const API_URLS = {
 
 export const appVariables = {
   loginToken: 'loginToken',
+  widgetId: 'WidgetID',
   businessTagID: 'businessTagId',
+  reportTagId: 'reportId',
   submissionTagId: 'submissionId',
   businessDomain: 'businessDomain',
   systemSubDomain: 'app',

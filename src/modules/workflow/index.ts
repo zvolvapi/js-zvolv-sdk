@@ -103,11 +103,19 @@ class WorkflowModule {
 
   async getDataSource(input: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
-    let url = createApiUrl(API_URLS_LEGACY.get_data_source, JSON.parse(input));
+    let input_data = JSON.parse(input);
+    if (!input_data.widgetId) {
+      return null
+    }
+    let url = createApiUrl(API_URLS_LEGACY.get_data_source, input_data);
     url = url.replace(
       new RegExp(`:${appVariables.businessTagID}`, "g"),
       this.workspaceInstance?.businessTagId
     );
+    url = url.replace(
+      new RegExp(`:${appVariables.widgetId}`, "g"),
+      input_data.widgetId??""
+    )
     return this.handleRequest("get", url, undefined, true);
   }
 
@@ -197,6 +205,50 @@ class WorkflowModule {
       this.workspaceInstance?.businessTagId
     );
     return this.handleRequest("post", url, JSON.parse(body));
+  }
+
+  async addDashboard(body: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.add_dashboard);
+    return this.handleRequest("post", url, JSON.parse(body), false);
+  }
+
+  async addWidget(body: any, reportId: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.add_widget);
+    url = url.replace(
+      new RegExp(`:${appVariables.reportTagId}`, "g"),
+      reportId
+    );
+    return this.handleRequest("post", url, JSON.parse(body), false);
+  }
+
+  async bulkaddWidget(body: any, reportId: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.bulk_add_widget);
+    url = url.replace(
+      new RegExp(`:${appVariables.reportTagId}`, "g"),
+      reportId
+    );
+    return this.handleRequest("post", url, JSON.parse(body), false);
+  }
+  async deleteWidget(body: any, widgetId: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.delete_widget);
+    url = url.replace(
+      new RegExp(`:${appVariables.widgetId}`, "g"),
+      widgetId
+    );
+    return this.handleRequest("post", url, JSON.parse(body), false);
+  }
+  async updateWidget(body: any, widgetId: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.update_widget);
+    url = url.replace(
+      new RegExp(`:${appVariables.widgetId}`, "g"),
+      widgetId
+    );
+    return this.handleRequest("post", url, JSON.parse(body), false);
   }
 }
 
