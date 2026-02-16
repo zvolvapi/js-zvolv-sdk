@@ -61,7 +61,6 @@ class AuthModule {
   }
 
   async logout(): Promise<any> {
-    // Implement logout logic using this.httpClient
     this.userInstance = undefined;
     localStorage.clear();
   }
