@@ -8,6 +8,7 @@ import {
 } from "../../helpers/constants";
 import AuthModule from "../auth";
 import { Form } from "../../interfaces/form.interface";
+import { report } from "process";
 
 class WorkflowModule {
   constructor(
@@ -114,7 +115,7 @@ class WorkflowModule {
     );
     url = url.replace(
       new RegExp(`:${appVariables.widgetId}`, "g"),
-      input_data.widgetId??""
+      input_data.widgetId ?? ""
     )
     return this.handleRequest("get", url, undefined, true);
   }
@@ -122,6 +123,27 @@ class WorkflowModule {
   async getSingleForm(formId: string): Promise<Form> {
     const url = createApiUrl(API_URLS.fetch_form, { id: formId });
     return this.handleRequest("get", url, undefined, true);
+  }
+
+
+  async getAllForm() {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.get_all_form, {});
+    url = url.replace(
+      new RegExp(`:${appVariables.businessTagID}`, "g"),
+      this.workspaceInstance?.businessTagId
+    );
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  async getSingleFormLegacy(formId: string) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.get_single_form, {
+      businessTagId: this.workspaceInstance.businessTagId,
+      formID: formId
+    });
+
+    return this.handleRequest("get", url, undefined, false);
   }
 
   async getUserGroup(filter: string): Promise<Form> {
@@ -241,14 +263,28 @@ class WorkflowModule {
     );
     return this.handleRequest("post", url, JSON.parse(body), false);
   }
-  async updateWidget(body: any, widgetId: any) {
+  async updateWidget(body: any, widgetId: any, reportId: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.update_widget);
     url = url.replace(
       new RegExp(`:${appVariables.widgetId}`, "g"),
       widgetId
     );
+    url = url.replace(
+      new RegExp(`:${appVariables.reportTagId}`, "g"),
+      reportId
+    );
     return this.handleRequest("post", url, JSON.parse(body), false);
+  }
+
+  async editWidget(body: any, widgetId: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.edit_widget);
+    url = url.replace(
+      new RegExp(`:${appVariables.widgetId}`, "g"),
+      widgetId
+    );
+    return this.handleRequest("put", url, JSON.parse(body), false);
   }
 }
 
