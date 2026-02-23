@@ -8,6 +8,7 @@ export const API_URLS_LEGACY = {
   workflow: "/rest/v17/workflow",
   all_dashboards: "/rest/v17/analytics/reports/get",
   add_dashboard: "/rest/v17/analytics/reports/add",
+  delete_dashboard: "/rest/v17/analytics/reports/delete/:reportId",
   add_widget: "/rest/v17/analytics/reports/:reportId/widgets/add",
   delete_widget: "/rest/v17/analytics/reports/:reportId/widgets/delete/:WidgetID",
   update_widget: "/rest/v17/analytics/reports/:reportId/widgets/update/:WidgetID",

@@ -8,7 +8,6 @@ import {
 } from "../../helpers/constants";
 import AuthModule from "../auth";
 import { Form } from "../../interfaces/form.interface";
-import { report } from "process";
 
 class WorkflowModule {
   constructor(
@@ -233,6 +232,16 @@ class WorkflowModule {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.add_dashboard);
     return this.handleRequest("post", url, JSON.parse(body), false);
+  }
+
+  async deleteDashboard(reportId: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.delete_dashboard);
+    url = url.replace(
+      new RegExp(`:${appVariables.reportTagId}`, "g"),
+      reportId
+    )
+    return this.handleRequest("DELETE", url, undefined, false);
   }
 
   async addWidget(body: any, reportId: any) {
