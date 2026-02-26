@@ -1,4 +1,4 @@
-import { report } from "process";
+
 
 // Export legacy API URLs as constants
 export const API_URLS_LEGACY = {
@@ -28,7 +28,8 @@ export const API_URLS_LEGACY = {
 export const API_URLS = {
   analytics_search: "/analytics/search",
   create_submission: "/submissions",
-  fetch_form: "/forms/:id",
+  fetch_form: "/api/v1/forms/:id",
+  fetch_all_forms: "/api/v1/forms/find/all",
   elastic_search: "/api/v1/analytics/search",
   field_unique_values: '/api/v1/analytics/values/unique',
   submissiog_rpc_all: '/api/v1/submissions/:submissionId/find/all',

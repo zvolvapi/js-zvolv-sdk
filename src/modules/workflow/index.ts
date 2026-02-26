@@ -103,25 +103,31 @@ class WorkflowModule {
 
   async getDataSource(input: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
-    let input_data = JSON.parse(input);
-    if (!input_data.widgetId) {
-      return null
-    }
-    let url = createApiUrl(API_URLS_LEGACY.get_data_source, input_data);
-    url = url.replace(
-      new RegExp(`:${appVariables.businessTagID}`, "g"),
-      this.workspaceInstance?.businessTagId
+
+    const input_data = JSON.parse(input);
+    if (!input_data.widgetId) return null;
+
+    const url = createApiUrl(
+      API_URLS_LEGACY.get_data_source,
+      {
+        [appVariables.businessTagID]: this.workspaceInstance.businessTagId,
+        [appVariables.widgetId]: input_data.widgetId,
+      },
+      null,
+      { wftype: input_data.wftype }
     );
-    url = url.replace(
-      new RegExp(`:${appVariables.widgetId}`, "g"),
-      input_data.widgetId ?? ""
-    )
-    return this.handleRequest("get", url, undefined, true);
+
+    return this.handleRequest("get", url, undefined, false);
   }
 
   async getSingleForm(formId: string): Promise<Form> {
     const url = createApiUrl(API_URLS.fetch_form, { id: formId });
     return this.handleRequest("get", url, undefined, true);
+  }
+
+  async getAllNewForms(query: any): Promise<Form> {
+    const url = createApiUrl(API_URLS.fetch_all_forms);
+    return this.handleRequest("post", url, JSON.parse(query), true);
   }
 
 
