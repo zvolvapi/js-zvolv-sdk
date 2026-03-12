@@ -250,6 +250,16 @@ class WorkflowModule {
     return this.handleRequest("DELETE", url, undefined, false);
   }
 
+  async getSingleWidget(WidgetID: string): Promise<Form> {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.get_single_widget, { WidgetID });
+    url = url.replace(
+      new RegExp(`:${appVariables.widgetId}`, "g"),
+      WidgetID
+    );
+    return this.handleRequest("get", url, undefined, true);
+  }
+
   async addWidget(body: any, reportId: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.add_widget);

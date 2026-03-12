@@ -21,7 +21,8 @@ export const API_URLS_LEGACY = {
   get_data_source: '/rest/v17/workflow/:businessTagId/widget/:WidgetID',
   edit_analytics_report_widget: '/rest/v17/analytics/reports/widget/edit/:WidgetID',
   authData: '/rest/v17/organisation/auth/data',
-  get_user_list: '/rest/v17/usergroups/autosearch/:businessTagId'
+  get_user_list: '/rest/v17/usergroups/autosearch/:businessTagId',
+  get_single_widget: '/rest/v17/analytics/widget/:WidgetID/get'
 };
 
 // Export API URLs as constants
@@ -66,3 +67,15 @@ export const appVariables = {
   ng2SlimLoadingBarHeight: '4px',
   accessTokenLocalStorage: 'accessToken',
 };
+
+export const formTypes = {
+  GENERIC: 'GENERIC',
+  INITIATION: 'INITIATION',
+  MASTER: 'MASTER',
+  BOT: 'BOT',
+  WORKFLOW: 'WORKFLOW',
+  ADHOC_TASK: 'ADHOC_TASK'
+}
+
+export const taskFields = ["Title", "Description", "Department", "Duration", "Assignee", "Assignee2", "Assignee3", "CurrentEscalationLevel", "Delay", "StartDate", "EndDate", "OriginalStartDate", "OriginalEndDate", "Status", "dStatus", "Priority", "StageCode", "CritPath", "ReworkCount", "SubmittedBy", "SubmittedOn", "CompleteDate"]
+
