@@ -130,6 +130,11 @@ class WorkflowModule {
     return this.handleRequest("post", url, JSON.parse(query), true);
   }
 
+  async getDocumentTemplates(): Promise<Form> {
+    const url = createApiUrl(API_URLS_LEGACY.fetch_document_templates);
+    return this.handleRequest("get", url, undefined, false);
+  }
+
 
   async getAllForm() {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");

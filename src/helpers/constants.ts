@@ -22,7 +22,8 @@ export const API_URLS_LEGACY = {
   edit_analytics_report_widget: '/rest/v17/analytics/reports/widget/edit/:WidgetID',
   authData: '/rest/v17/organisation/auth/data',
   get_user_list: '/rest/v17/usergroups/autosearch/:businessTagId',
-  get_single_widget: '/rest/v17/analytics/widget/:WidgetID/get'
+  get_single_widget: '/rest/v17/analytics/widget/:WidgetID/get',
+  fetch_document_templates: '/rest/v17/custom/documents',
 };
 
 // Export API URLs as constants
