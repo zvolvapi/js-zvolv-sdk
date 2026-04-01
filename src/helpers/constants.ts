@@ -8,6 +8,7 @@ export const API_URLS_LEGACY = {
   workflow: "/rest/v17/workflow",
   all_dashboards: "/rest/v17/analytics/reports/get",
   add_dashboard: "/rest/v17/analytics/reports/add",
+  edit_dashboard: "/rest/v17/analytics/reports/edit/:reportId",
   delete_dashboard: "/rest/v17/analytics/reports/delete/:reportId",
   add_widget: "/rest/v17/analytics/reports/:reportId/widgets/add",
   delete_widget: "/rest/v17/analytics/reports/:reportId/widgets/delete/:WidgetID",
@@ -24,6 +25,22 @@ export const API_URLS_LEGACY = {
   get_user_list: '/rest/v17/usergroups/autosearch/:businessTagId',
   get_single_widget: '/rest/v17/analytics/widget/:WidgetID/get',
   fetch_document_templates: '/rest/v17/custom/documents',
+
+  // Databases - Legacy API
+  db_get_bulk_uploads: '/rest/v17/bulkupload/resource/:resourceId',
+  db_get_bulk_downloads: '/rest/v17/bulkdownload/resource/:resourceId',
+  db_bulk_export: '/rest/v17/reports/master/:formId',
+  db_bulk_upload: '/rest/v17/bulk/form/:formId/validate/file',
+  db_delete_submissions: '/rest/v17/org/:businessTagId/delete/forms/:formId/submissions',
+  db_delete_all_submissions: '/rest/v17/org/:businessTagId/delete/forms/:formId/all/submissions',
+  db_send_download_summary: '/rest/v17/email/bulkdownload/resource/:resourceId/jobid/:jobId',
+  db_single_submission_download: '/rest/v17/:businessTagId/forms/submission/download/:formSubmissionId',
+  db_get_forms_lite: '/rest/v17/lite/forms',
+  db_get_form_lite: '/rest/v17/lite/forms/:formId',
+  db_get_submissions_lite: '/rest/v17/lite/submissions',
+  db_create_form_legacy: '/rest/v17/:businessTagId/forms',
+  db_put_form_details: '/rest/v17/:businessTagId/formdetails/:formId',
+  db_file_upload: '/rest/v17/:businessTagId/:businessTagId/fileupload',
 };
 
 // Export API URLs as constants
@@ -48,6 +65,15 @@ export const API_URLS = {
   getAllPlaygrounds: '/zwall/playground/',
   uploadFile: '/:businessTagId/:businessTagId/fileupload',
   getSingleWidget: '/analytics/widget/:WidgetID/get',
+
+  // Databases - New (Bifrost) API
+  db_create_form: '/api/v1/forms',
+  db_update_form: '/api/v1/forms',
+  db_delete_submissions_grpc: '/api/v1/submissions/delete',
+  db_bulk_export_grpc: '/api/v1/submissions/export/:id/:type',
+  db_bulk_import: '/api/v1/submissions/fileupload/:id',
+  db_data_sync_single: '/api/v1/submissions/sync/request/:id/:onlyCountReq',
+  db_data_sync_all: '/api/v1/submissions/sync/request/all',
 };
 
 export const appVariables = {

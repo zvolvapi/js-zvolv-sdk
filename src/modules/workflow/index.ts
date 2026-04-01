@@ -245,6 +245,16 @@ class WorkflowModule {
     return this.handleRequest("post", url, JSON.parse(body), false);
   }
 
+  async editDashboard(reportId: any, body: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.edit_dashboard);
+    url = url.replace(
+      new RegExp(`:${appVariables.reportTagId}`, "g"),
+      reportId
+    )
+    return this.handleRequest("put", url, JSON.parse(body), false);
+  }
+
   async deleteDashboard(reportId: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.delete_dashboard);
@@ -315,6 +325,166 @@ class WorkflowModule {
       widgetId
     );
     return this.handleRequest("put", url, JSON.parse(body), false);
+  }
+
+  // -------------------------------------------------------------------------
+  // Databases — Legacy API
+  // -------------------------------------------------------------------------
+
+  async dbGetMasterForms() {
+    const filter = JSON.stringify([{ operator: '=', value: 'MASTER', column: 'FormType' }]);
+    const url = `${API_URLS_LEGACY.db_get_forms_lite}?filter=${encodeURIComponent(filter)}`;
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  async dbGetFormLite(formId: string | number, filter?: Record<string, any>) {
+    let url = createApiUrl(API_URLS_LEGACY.db_get_form_lite, { formId });
+    if (filter) url += `?filter=${encodeURIComponent(JSON.stringify(filter))}`;
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  async dbGetAllSubmissionsLite(formId: string | number, filter: any[], limit: number, offset: number, globalSearchBody: any[]) {
+    const combined = [...filter, { operator: '=', value: formId, column: 'FormID' }, ...globalSearchBody];
+    const pagination = JSON.stringify({ limit, offset });
+    const url = `${API_URLS_LEGACY.db_get_submissions_lite}?pagination=${encodeURIComponent(pagination)}&filter=${encodeURIComponent(JSON.stringify(combined))}`;
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  async dbGetAllUploads(formId: string | number) {
+    const url = createApiUrl(API_URLS_LEGACY.db_get_bulk_uploads, { resourceId: formId });
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  async dbGetAllDownloads(formId: string | number) {
+    const url = createApiUrl(API_URLS_LEGACY.db_get_bulk_downloads, { resourceId: formId });
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  async dbBulkDownload(formId: string | number, formSubmissionIds: any[]) {
+    const url = createApiUrl(API_URLS_LEGACY.db_bulk_export, { formId });
+    return this.handleRequest("post", url, { FormSubmissionIDs: formSubmissionIds }, true);
+  }
+
+  async dbDeleteSubmissions(formId: string | number, formSubmissionIds: any[]) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.db_delete_submissions, { formId });
+    url = url.replace(`:${appVariables.businessTagID}`, this.workspaceInstance.businessTagId);
+    return this.handleRequest("post", url, { FormSubmissionIDs: formSubmissionIds }, true);
+  }
+
+  async dbDeleteAllSubmissions(formId: string | number) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.db_delete_all_submissions, { formId });
+    url = url.replace(`:${appVariables.businessTagID}`, this.workspaceInstance.businessTagId);
+    return this.handleRequest("delete", url, undefined, true);
+  }
+
+  async dbSendDownloadSummary(formId: string | number, jobId: string, body: any) {
+    const url = createApiUrl(API_URLS_LEGACY.db_send_download_summary, { resourceId: formId, jobId });
+    return this.handleRequest("post", url, body, true);
+  }
+
+  async dbSingleSubmissionDownload(formSubmissionId: string | number) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.db_single_submission_download, { formSubmissionId });
+    url = url.replace(`:${appVariables.businessTagID}`, this.workspaceInstance.businessTagId);
+    return this.handleRequest("get", url, undefined, true);
+  }
+
+  async dbCreateFormLegacy(data: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.db_create_form_legacy);
+    url = url.replace(`:${appVariables.businessTagID}`, this.workspaceInstance.businessTagId);
+    return this.handleRequest("post", url, data, true);
+  }
+
+  async dbPutFormDetails(formId: string | number, body: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    let url = createApiUrl(API_URLS_LEGACY.db_put_form_details, { formId });
+    url = url.replace(`:${appVariables.businessTagID}`, this.workspaceInstance.businessTagId);
+    return this.handleRequest("put", url, body, true);
+  }
+
+  async dbFileUpload(formId: number, formData: FormData) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const btId = this.workspaceInstance.businessTagId;
+    let url = createApiUrl(API_URLS_LEGACY.db_file_upload);
+    url = url.replace(new RegExp(`:${appVariables.businessTagID}`, "g"), btId);
+    const headers = { ...(await this.getHeaders(true)), 'Content-Type': 'multipart/form-data' };
+    try {
+      const response = await this.httpClient.request({ method: "post", url, data: formData, headers });
+      if (response.status === 200 || response.status === 201) return response.data;
+      throw new Error("File upload failed");
+    } catch {
+      throw new Error("File upload failed");
+    }
+  }
+
+  async dbBulkUploadLegacy(formId: string | number, formData: FormData) {
+    const url = createApiUrl(API_URLS_LEGACY.db_bulk_upload, { formId });
+    const headers = { ...(await this.getHeaders(true)), 'Content-Type': 'multipart/form-data' };
+    try {
+      const response = await this.httpClient.request({ method: "post", url, data: formData, headers });
+      if (response.status === 200 || response.status === 201) return response.data;
+      throw new Error("Bulk upload failed");
+    } catch {
+      throw new Error("Bulk upload failed");
+    }
+  }
+
+  // -------------------------------------------------------------------------
+  // Databases — New (Bifrost) API
+  // -------------------------------------------------------------------------
+
+  async dbGetAllForms(query: { skip: number; limit: number; sort: any; filter: any[]; filterOperator: string | null }) {
+    return this.handleRequest("post", API_URLS.db_create_form.replace('/forms', '/forms/find/all'), query, true);
+  }
+
+  async dbCreateForm(data: any) {
+    return this.handleRequest("post", API_URLS.db_create_form, data, true);
+  }
+
+  async dbUpdateForm(data: any, enableRetrofit = false) {
+    const url = `${API_URLS.db_update_form}?enableRetrofit=${enableRetrofit}`;
+    return this.handleRequest("put", url, data, true);
+  }
+
+  async dbDeleteSubmissionsGrpc(formId: string | number, submissionIds: any[], isTruncate = false) {
+    return this.handleRequest("post", API_URLS.db_delete_submissions_grpc, { formId, submissionIds, isTruncate }, true);
+  }
+
+  async dbGetBulkExport(formId: string | number, exportType: 'csv' | 'xlsx'): Promise<Blob> {
+    const url = createApiUrl(API_URLS.db_bulk_export_grpc, { id: formId, type: exportType });
+    const headers = await this.getHeaders(true);
+    const contentType = exportType === 'csv'
+      ? 'application/zip'
+      : 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+    try {
+      const response = await this.httpClient.request({
+        method: "post",
+        url,
+        data: {},
+        headers: { ...headers, 'Content-Type': contentType, Accept: contentType },
+        responseType: 'blob',
+      });
+      return response.data as Blob;
+    } catch {
+      throw new Error("Export failed");
+    }
+  }
+
+  async dbPostBulkImport(formId: string | number, filePathUrl: string) {
+    const url = createApiUrl(API_URLS.db_bulk_import, { id: formId });
+    return this.handleRequest("post", url, { fileUrl: filePathUrl }, true);
+  }
+
+  async dbGetDataSyncDetails(id: number, onlyCountReq: boolean, skip: number, limit: number) {
+    const url = createApiUrl(API_URLS.db_data_sync_single, { id, onlyCountReq: String(onlyCountReq) }, null, { skip, limit });
+    return this.handleRequest("get", url, undefined, true);
+  }
+
+  async dbGetAllDataSync(skip: number, limit: number, filter: any[], filterOperator: string | null) {
+    return this.handleRequest("post", API_URLS.db_data_sync_all, { skip, limit, filter, filterOperator }, true);
   }
 }
 
