@@ -76,6 +76,23 @@ export const API_URLS = {
   db_data_sync_all: '/api/v1/submissions/sync/request/all',
 };
 
+// Task-specific API URLs (New Bifrost/gRPC)
+export const TASK_API_URLS = {
+  get_analytics_tasks: '/api/v1/analytics/search',
+  edit_task: '/api/v1/tasks/edit',
+  create_adhoc_task: '/api/v1/tasks/adhoc/create',
+};
+
+// Task-specific API URLs (Legacy)
+export const TASK_API_URLS_LEGACY = {
+  get_tasks: '/rest/v17/user/tasks/get/:businessTagId',
+  get_single_task: '/rest/v17/tasks/getsingle/:businessTagId/:taskId',
+  get_all_tasks: '/rest/v17/tasks/:businessTagId',
+  edit_task: '/rest/v17/tasks/edit/:businessTagId',
+  edit_bulk_tasks: '/rest/v17/tasks/bulk/edit/:businessTagId',
+  create_adhoc_task: '/rest/v17/org/:businessTagId/workflow/addtask/stage',
+};
+
 export const appVariables = {
   loginToken: 'loginToken',
   widgetId: 'WidgetID',

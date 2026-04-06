@@ -4,6 +4,8 @@ import { Workspace } from "../../interfaces/workspace.interface";
 import {
   API_URLS,
   API_URLS_LEGACY,
+  TASK_API_URLS,
+  TASK_API_URLS_LEGACY,
   appVariables,
 } from "../../helpers/constants";
 import AuthModule from "../auth";
@@ -485,6 +487,65 @@ class WorkflowModule {
 
   async dbGetAllDataSync(skip: number, limit: number, filter: any[], filterOperator: string | null) {
     return this.handleRequest("post", API_URLS.db_data_sync_all, { skip, limit, filter, filterOperator }, true);
+  }
+
+  // -------------------------------------------------------------------------
+  // Tasks API
+  // -------------------------------------------------------------------------
+
+  /** Fetch tasks via Elasticsearch/analytics (primary method used by tasks page) */
+  async getAnalyticsTasks(query: any) {
+    return this.handleRequest("post", TASK_API_URLS.get_analytics_tasks, query, true);
+  }
+
+  /** Get paginated tasks list (legacy) */
+  async getTasks(filterObj: any = {}, pageObj: any = { limit: 500, offset: 0 }, showAdhocOnly = false) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const filter = encodeURIComponent(JSON.stringify(filterObj));
+    const page = encodeURIComponent(JSON.stringify(pageObj));
+    let url = createApiUrl(TASK_API_URLS_LEGACY.get_tasks, { businessTagId: this.workspaceInstance.businessTagId });
+    url += `?show_adhoc_only=${showAdhocOnly}&filter=${filter}&page=${page}`;
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  /** Get a single task by ID (legacy) */
+  async getSingleTask(taskId: number | string) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(TASK_API_URLS_LEGACY.get_single_task, {
+      businessTagId: this.workspaceInstance.businessTagId,
+      taskId,
+    });
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  /** Get all tasks (legacy, up to limit) */
+  async getAllTasks(pagination: any = { limit: 1000, offset: 0 }) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const page = encodeURIComponent(JSON.stringify(pagination));
+    let url = createApiUrl(TASK_API_URLS_LEGACY.get_all_tasks, { businessTagId: this.workspaceInstance.businessTagId });
+    url += `?page=${page}`;
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  /** Edit a single task (status, assignee, escalation, etc.) */
+  async editTask(body: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(TASK_API_URLS_LEGACY.edit_task, { businessTagId: this.workspaceInstance.businessTagId });
+    return this.handleRequest("post", url, body, true);
+  }
+
+  /** Bulk-edit multiple tasks */
+  async editBulkTasks(body: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(TASK_API_URLS_LEGACY.edit_bulk_tasks, { businessTagId: this.workspaceInstance.businessTagId });
+    return this.handleRequest("post", url, body, true);
+  }
+
+  /** Create an ad-hoc task */
+  async createAdhocTask(body: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(TASK_API_URLS_LEGACY.create_adhoc_task, { businessTagId: this.workspaceInstance.businessTagId });
+    return this.handleRequest("post", url, body, true);
   }
 }
 
