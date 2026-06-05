@@ -8,6 +8,12 @@ export const getClientType = (): "browser" | "server" => {
   return isBrowser ? "browser" : "server";
 };
 
+export const isLegacyId = (id: string | number | null | undefined): boolean => {
+  if (id === null || id === undefined) return false;
+  const s = String(id);
+  return s.length > 0 && !isNaN(Number(s));
+};
+
 export const createApiUrl = (
   path: string,
   embeddedParams?: Record<string, any> | Array<Record<string, any>> | null,

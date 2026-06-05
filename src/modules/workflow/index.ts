@@ -44,23 +44,35 @@ class WorkflowModule {
     data?: any,
     authRequired = false
   ) {
+    let response;
     try {
-      const response = await this.httpClient.request({
+      response = await this.httpClient.request({
         method,
         url,
         data,
         headers: await this.getHeaders(authRequired),
       });
-      if (
-        (response.status === 200 || response.status === 201) &&
-        response.data.error === false
-      ) {
-        return response.data.data || response.data;
-      }
-      throw new Error("Error fetching data");
-    } catch (error) {
-      throw new Error("Error fetching data");
+    } catch (error: any) {
+      const resData = error?.response?.data;
+      const message =
+        resData?.message ??
+        resData?.error_message ??
+        (typeof resData?.error === "string" ? resData.error : null) ??
+        error?.message ??
+        "Error fetching data";
+      throw new Error(message);
     }
+    if (
+      (response.status === 200 || response.status === 201) &&
+      response.data.error === false
+    ) {
+      return response.data.data || response.data;
+    }
+    throw new Error(
+      response.data?.message ??
+        response.data?.error_message ??
+        "Error fetching data"
+    );
   }
 
   async getWorkflows() {
@@ -95,10 +107,11 @@ class WorkflowModule {
   }
 
   async getFieldDistinctValues(input: any) {
+    const body = typeof input === 'string' ? JSON.parse(input) : input;
     return this.handleRequest(
       "post",
       API_URLS.field_unique_values,
-      JSON.parse(input),
+      body,
       true
     );
   }
@@ -199,16 +212,20 @@ class WorkflowModule {
     sort: any,
     elementFilter: any,
     filters: any,
-    filterOperator: any = null
+    filterOperator: any = null,
+    elementsProjectionLabels: any[] = []
   ) {
-    const body = {
+    const body: any = {
       skip: skip,
       limit: limit,
       sort: sort,
-      elementFilter: elementFilter,
+      elementsFilter: elementFilter,
       filter: filters,
       filterOperator: filterOperator,
     };
+    if (elementsProjectionLabels.length > 0) {
+      body.elementsProjection = { labels: elementsProjectionLabels };
+    }
     let url = API_URLS.submissiog_rpc_all;
     url = url.replace(
       new RegExp(`:${appVariables.submissionTagId}`, "g"),
@@ -546,6 +563,77 @@ class WorkflowModule {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     const url = createApiUrl(TASK_API_URLS_LEGACY.create_adhoc_task, { businessTagId: this.workspaceInstance.businessTagId });
     return this.handleRequest("post", url, body, true);
+  }
+
+  async invokeTriggers(triggerId: string, body: any) {
+    const url = createApiUrl(API_URLS.invoke_triggers, { id: triggerId });
+    return this.handleRequest("post", url, body, true);
+  }
+
+  async invokeNuclioAutomation(automationName: string, body: any) {
+    const url = `${API_URLS.invoke_nuclio_automation}?functionName=${encodeURIComponent(automationName)}`;
+    return this.handleRequest("post", url, body, true);
+  }
+
+  async getSubmissionHistory(formSubmissionId: string, body: any = {}) {
+    const url = createApiUrl(API_URLS.submission_history, { formSubmissionId });
+    return this.handleRequest("post", url, body, true);
+  }
+
+  async batchSubmission(body: any, skipSyncRequest = true) {
+    let url = API_URLS.batch_submission;
+    if (skipSyncRequest) url += `?skipSyncRequest=${skipSyncRequest}`;
+    return this.handleRequest("post", url, body, true);
+  }
+
+  async mediaUpload(formData: FormData, zapId?: string) {
+    let url = API_URLS.media_upload;
+    if (zapId) url += `?zapid=${zapId}`;
+    const headers = { ...(await this.getHeaders(true)), 'Content-Type': 'multipart/form-data' };
+    try {
+      const response = await this.httpClient.request({ method: "post", url, data: formData, headers });
+      if (response.status === 200 || response.status === 201) return response.data;
+      throw new Error("Media upload failed");
+    } catch {
+      throw new Error("Media upload failed");
+    }
+  }
+
+  /**
+   * Fetch the saved draft (if any) for a submission. Mirrors Angular's
+   * znFormService.getSubmissionDraft used by z-form.component.ts:getDraftValues.
+   */
+  async getSubmissionDraft(submissionId: string) {
+    const url = createApiUrl(API_URLS.submission_draft_get, { submissionId });
+    return this.handleRequest("get", url, undefined, true);
+  }
+
+  /**
+   * Persist a draft for a submission. Mirrors Angular's
+   * znFormService.postSubmissionDraft.
+   * `body` shape: `{ submissionId?: string|null, elements: [{elementId, value}, ...] }`
+   */
+  async postSubmissionDraft(body: any) {
+    return this.handleRequest("post", API_URLS.submission_draft_post, body, true);
+  }
+
+  /**
+   * Fetch the greyfell-variant form definition for the given form ID. Mirrors
+   * Angular's znFormService.getFormGreyfell used by FORM_SEARCH `dataSource.allowVersion2`.
+   */
+  async getFormGreyfell(formId: string) {
+    const url = createApiUrl(API_URLS.form_greyfell, { formId });
+    return this.handleRequest("get", url, undefined, true);
+  }
+
+  /**
+   * Returns the caller's client info (currently just their public IP). Used to
+   * auto-fill INPUT_SHORT_TEXT fields with subType `INPUT_IP`.
+   *
+   * Backend may not provide this — caller should treat failure as "Unknown".
+   */
+  async getClientInfo() {
+    return this.handleRequest("get", API_URLS.client_info, undefined, false);
   }
 }
 

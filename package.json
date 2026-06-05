@@ -1,6 +1,6 @@
 {
-  "name": "zvolv-sdk",
-  "version": "0.0.0-development",
+  "name": "@zestl/zvolv-js-sdk",
+  "version": "0.0.3",
   "description": "Zvolv developer kit for Javascript",
   "exports": {
     ".": {
@@ -47,7 +47,7 @@
     "No-Code/Low-Code",
     "Hyper-automation"
   ],
-  "author": "Akshay Jadhav",
+  "author": "Awnish Yadav",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/zvolvapi/js-zvolv-sdk/issues"

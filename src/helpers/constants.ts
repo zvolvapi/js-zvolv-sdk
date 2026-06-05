@@ -41,18 +41,20 @@ export const API_URLS_LEGACY = {
   db_create_form_legacy: '/rest/v17/:businessTagId/forms',
   db_put_form_details: '/rest/v17/:businessTagId/formdetails/:formId',
   db_file_upload: '/rest/v17/:businessTagId/:businessTagId/fileupload',
+  post_submission_legacy: '/rest/v17/:businessTagId/forms/:FormID/submissions',
 };
 
 // Export API URLs as constants
 export const API_URLS = {
   analytics_search: "/analytics/search",
-  create_submission: "/submissions",
+  create_submission: "/api/v1/submissions",
   fetch_form: "/api/v1/forms/:id",
   fetch_all_forms: "/api/v1/forms/find/all",
   elastic_search: "/api/v1/analytics/search",
   field_unique_values: '/api/v1/analytics/values/unique',
   submissiog_rpc_all: '/api/v1/submissions/:submissionId/find/all',
   update_submission: '/submissions/:id',
+  fetch_submission: '/submissions/:id',
   postGPTSearch: '/zwall/v3/agent_manager/',
   singleChatHistory: '/zwall/chat_history/:chatId',
   chatHistory: '/zwall/chat_history/',
@@ -74,6 +76,19 @@ export const API_URLS = {
   db_bulk_import: '/api/v1/submissions/fileupload/:id',
   db_data_sync_single: '/api/v1/submissions/sync/request/:id/:onlyCountReq',
   db_data_sync_all: '/api/v1/submissions/sync/request/all',
+
+  invoke_triggers: '/api/v1/automations/triggers/invoke/:id',
+  invoke_nuclio_automation: '/nuclio/function_invocations',
+  submission_history: '/api/v1/submissions/history/:formSubmissionId',
+  batch_submission: '/api/v1/submissions/batch',
+  media_upload: '/media/upload',
+  invoke_agent: '/zwall/v3/agent_manager/',
+
+  // Form runtime — added for parity with Angular zvolv-web z-form module.
+  submission_draft_get: '/api/v1/submissions/draft/:submissionId',
+  submission_draft_post: '/api/v1/submissions/draft',
+  form_greyfell: '/api/v1/forms/:formId/greyfell',
+  client_info: '/rest/v17/client/info',
 };
 
 // Task-specific API URLs (New Bifrost/gRPC)

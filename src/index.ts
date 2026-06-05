@@ -69,7 +69,11 @@ export class ZvolvClient {
     this.validate();
 
     if (!this._submission) {
-      this._submission = new SubmissionModule(this.httpClient);
+      this._submission = new SubmissionModule(
+        this.httpClient,
+        this._workspace?.workspaceInstance,
+        this.auth
+      );
     }
     return this._submission;
   }

@@ -34,4 +34,5 @@ export interface CreateSubmissionDto {
 export interface SubmissionQueryParams {
     skipAutomation?: boolean;
     skipValidations?: boolean;
+    isDraft?: boolean;
 }
