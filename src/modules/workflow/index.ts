@@ -42,7 +42,8 @@ class WorkflowModule {
     method: string,
     url: string,
     data?: any,
-    authRequired = false
+    authRequired = false,
+    isDirect = false
   ) {
     let response;
     try {
@@ -66,6 +67,7 @@ class WorkflowModule {
       (response.status === 200 || response.status === 201) &&
       response.data.error === false
     ) {
+      if(isDirect) return response
       return response.data.data || response.data;
     }
     throw new Error(
@@ -173,16 +175,17 @@ class WorkflowModule {
 
   async getUserGroup(filter: string): Promise<Form> {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
-    let url = createApiUrl(API_URLS_LEGACY.get_usergroups_url, { filter });
-    url = url.replace(
-      new RegExp(`:${appVariables.businessTagID}`, "g"),
-      this.workspaceInstance?.businessTagId
+    const url = createApiUrl(
+      API_URLS_LEGACY.get_usergroups_url,
+      { [appVariables.businessTagID]: this.workspaceInstance.businessTagId },
+      null,
+      { filter }
     );
-    return this.handleRequest("get", url, undefined, true);
+    return this.handleRequest("get", url, undefined, false, true);
   }
 
   async searchMembers(body: string): Promise<Form> {
-    const url = createApiUrl(API_URLS_LEGACY.search_users, {
+    const url = createApiUrl(API_URLS_LEGACY.search_users, null, null, {
       filters: JSON.stringify({ HideSpecialUserGroups: true }),
     });
     return this.handleRequest("post", url, JSON.parse(body), true);
@@ -572,6 +575,15 @@ class WorkflowModule {
 
   async invokeNuclioAutomation(automationName: string, body: any) {
     const url = `${API_URLS.invoke_nuclio_automation}?functionName=${encodeURIComponent(automationName)}`;
+    return this.handleRequest("post", url, body, true);
+  }
+
+  async invokeAgent(body: any, flowId?: string, agentId?: string) {
+    let url = API_URLS.invoke_agent;
+    const params: string[] = [];
+    if (flowId) params.push(`flow_id=${encodeURIComponent(flowId)}`);
+    if (agentId) params.push(`agent_id=${encodeURIComponent(agentId)}`);
+    if (params.length) url += `?${params.join("&")}`;
     return this.handleRequest("post", url, body, true);
   }
 
