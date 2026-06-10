@@ -77,9 +77,10 @@ class WorkflowModule {
     );
   }
 
-  async getWorkflows() {
+  async getWorkflows(ZvibeAppProgress?: boolean) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
-    const url = `${API_URLS_LEGACY.workflow}/${this.workspaceInstance.businessTagId}/type?light=true`;
+
+    const url = `${API_URLS_LEGACY.workflow}/${this.workspaceInstance.businessTagId}/type?light=true${ZvibeAppProgress ? "&ZvibeAppProgress=true" : ""}`;
     return this.handleRequest("get", url);
   }
 
