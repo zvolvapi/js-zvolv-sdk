@@ -1,5 +1,5 @@
 import { AxiosInstance } from "axios";
-import { createApiUrl, getClientType } from "../../helpers/client";
+import { createApiUrl, getClientType, isLegacyId } from "../../helpers/client";
 import { Workspace } from "../../interfaces/workspace.interface";
 import {
   API_URLS,
@@ -183,6 +183,17 @@ class WorkflowModule {
       { filter }
     );
     return this.handleRequest("get", url, undefined, false, true);
+  }
+
+  async checkPermissions(
+    resourceId: number,
+    opTypes: string[]
+  ): Promise<string[]> {
+    const url = createApiUrl(API_URLS_LEGACY.check_permissions, {
+      resourceId,
+    });
+    const result = await this.handleRequest("post", url, { opTypes }, false);
+    return result?.permissions ?? [];
   }
 
   async searchMembers(body: string): Promise<Form> {
@@ -392,7 +403,7 @@ class WorkflowModule {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.db_delete_submissions, { formId });
     url = url.replace(`:${appVariables.businessTagID}`, this.workspaceInstance.businessTagId);
-    return this.handleRequest("post", url, { FormSubmissionIDs: formSubmissionIds }, true);
+    return this.handleRequest("post", url, { FormSubmissionIDs: formSubmissionIds }, false);
   }
 
   async dbDeleteAllSubmissions(formId: string | number) {
@@ -610,6 +621,25 @@ class WorkflowModule {
     } catch {
       throw new Error("Media upload failed");
     }
+  }
+
+  async getSingleSubmission(submissionId: string) {
+    if (isLegacyId(submissionId)) {
+      const url = createApiUrl(API_URLS_LEGACY.db_get_submissions_lite, undefined, { id: submissionId });
+      const response = await this.httpClient.request({
+        method: "get",
+        url,
+        headers: await this.getHeaders(false),
+      });
+      return response.data?.data ?? response.data;
+    }
+    const url = createApiUrl(API_URLS.single_submission, { id: submissionId });
+    const response = await this.httpClient.request({
+      method: "get",
+      url,
+      headers: await this.getHeaders(true),
+    });
+    return response.data?.data ?? response.data;
   }
 
   /**

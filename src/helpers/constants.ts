@@ -42,6 +42,7 @@ export const API_URLS_LEGACY = {
   db_put_form_details: '/rest/v17/:businessTagId/formdetails/:formId',
   db_file_upload: '/rest/v17/:businessTagId/:businessTagId/fileupload',
   post_submission_legacy: '/rest/v17/:businessTagId/forms/:FormID/submissions',
+  check_permissions: '/rest/v17/accesscontrol/check/resource/:resourceId',
 };
 
 // Export API URLs as constants
@@ -85,6 +86,7 @@ export const API_URLS = {
   invoke_agent: '/zwall/v3/agent_manager/',
 
   // Form runtime — added for parity with Angular zvolv-web z-form module.
+  single_submission: '/api/v1/submissions/:id',
   submission_draft_get: '/api/v1/submissions/draft/:submissionId',
   submission_draft_post: '/api/v1/submissions/draft',
   form_greyfell: '/api/v1/forms/:formId/greyfell',
