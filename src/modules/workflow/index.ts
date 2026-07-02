@@ -119,6 +119,25 @@ class WorkflowModule {
     );
   }
 
+  async getFormSubmissionFieldValues(
+    formTitle: string,
+    fieldLabel: string,
+    term?: string | null,
+    filter?: any
+  ) {
+    const params: string[] = [];
+    params.push(`formtitle=${encodeURIComponent(formTitle)}`);
+    params.push(`fieldlabel=${encodeURIComponent(fieldLabel)}`);
+    if (term != null && term !== "") {
+      params.push(`search=${encodeURIComponent(term)}`);
+    }
+    if (filter) {
+      params.push(`filter=${encodeURIComponent(JSON.stringify(filter))}`);
+    }
+    const url = `${API_URLS_LEGACY.search_form_submissions}?${params.join("&")}`;
+    return this.handleRequest("get", url);
+  }
+
   async getDataSource(input: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
 
@@ -677,6 +696,63 @@ class WorkflowModule {
    */
   async getClientInfo() {
     return this.handleRequest("get", API_URLS.client_info, undefined, false);
+  }
+
+  /**
+   * Fetch the full organisation web config (branding/theme) for a domain.
+   * Same endpoint workspace.init() uses, but returns the raw config object
+   * (PRIMARY_COLOR, LOGO_URL, FAVICON_URL, LOGO_TEXT, WEB_THEME, …) so the
+   * dashboard can hydrate its theme editor from the server.
+   */
+  async getOrgConfig(domain?: string) {
+    const sub = domain || this.workspaceInstance?.businessDomain || "";
+    const url = `${API_URLS_LEGACY.workspace}/${sub}`;
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  /**
+   * Persist the dashboard web theme for the organisation. `body` is the theme
+   * override object (or its JSON string). Callers should treat failure as
+   * non-fatal and keep a local copy, since the backend may not yet implement
+   * this endpoint.
+   */
+  async saveWebTheme(body: any, domain?: string) {
+    const sub = domain || this.workspaceInstance?.businessDomain || "";
+    const url = createApiUrl(API_URLS_LEGACY.save_web_theme, { domain: sub });
+    const payload = typeof body === "string" ? JSON.parse(body) : body;
+    return this.handleRequest("post", url, payload, false);
+  }
+
+  /**
+   * Read the persisted dashboard theme JSON stored under the `theme_config`
+   * key of the organisation web config (`/organisation/web/config/:domain`).
+   * Returns the parsed value (or null when the key is absent). Reuses the same
+   * endpoint as getOrgConfig so branding/theme come from a single source.
+   */
+  async getThemeConfig(domain?: string) {
+    const cfg = await this.getOrgConfig(domain);
+    const raw = cfg?.theme_config ?? cfg?.THEME_CONFIG ?? null;
+    if (raw == null) return null;
+    try {
+      return typeof raw === "string" ? JSON.parse(raw) : raw;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Persist the dashboard theme JSON under the `theme_config` key on the
+   * organisation web config endpoint (`/organisation/web/config/:domain`) —
+   * the same endpoint used for reading. Callers should treat failure as
+   * non-fatal and keep a local copy, since the backend may not yet implement
+   * this key.
+   */
+  async saveThemeConfig(themeConfig: any, domain?: string) {
+    const sub = domain || this.workspaceInstance?.businessDomain || "";
+    const url = `${API_URLS_LEGACY.workspace}/${sub}`;
+    const payload =
+      typeof themeConfig === "string" ? JSON.parse(themeConfig) : themeConfig;
+    return this.handleRequest("post", url, { theme_config: payload }, false);
   }
 }
 
