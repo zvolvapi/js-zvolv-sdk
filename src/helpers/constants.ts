@@ -5,7 +5,7 @@ export const API_URLS_LEGACY = {
   login: "/rest/v17/user/login",
   logout: "/rest/v17/user/logout",
   workspace: "/rest/v17/organisation/web/config",
-  save_web_theme: "/rest/v17/organisation/web/config/theme/:domain",
+  org_settings_forui: "/rest/v17/:businessTagId/orgsettings/forui",
   workflow: "/rest/v17/workflow",
   all_dashboards: "/rest/v17/analytics/reports/get",
   add_dashboard: "/rest/v17/analytics/reports/add",

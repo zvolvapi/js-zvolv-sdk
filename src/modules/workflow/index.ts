@@ -219,7 +219,7 @@ class WorkflowModule {
     const url = createApiUrl(API_URLS_LEGACY.search_users, null, null, {
       filters: JSON.stringify({ HideSpecialUserGroups: true }),
     });
-    return this.handleRequest("post", url, JSON.parse(body), true);
+    return this.handleRequest("post", url, JSON.parse(body), false);
   }
 
   async putWidget(input: any, body: any): Promise<any> {
@@ -325,7 +325,7 @@ class WorkflowModule {
       new RegExp(`:${appVariables.widgetId}`, "g"),
       WidgetID
     );
-    return this.handleRequest("get", url, undefined, true);
+    return this.handleRequest("get", url, undefined, false);
   }
 
   async addWidget(body: any, reportId: any) {
@@ -710,28 +710,26 @@ class WorkflowModule {
     return this.handleRequest("get", url, undefined, false);
   }
 
-  /**
-   * Persist the dashboard web theme for the organisation. `body` is the theme
-   * override object (or its JSON string). Callers should treat failure as
-   * non-fatal and keep a local copy, since the backend may not yet implement
-   * this endpoint.
-   */
-  async saveWebTheme(body: any, domain?: string) {
-    const sub = domain || this.workspaceInstance?.businessDomain || "";
-    const url = createApiUrl(API_URLS_LEGACY.save_web_theme, { domain: sub });
-    const payload = typeof body === "string" ? JSON.parse(body) : body;
-    return this.handleRequest("post", url, payload, false);
+  async getOrgSettings() {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(API_URLS_LEGACY.org_settings_forui, {
+      [appVariables.businessTagID]: this.workspaceInstance.businessTagId,
+    });
+    const data = await this.handleRequest("get", url, undefined, false);
+    return data?.OrgSettings ?? null;
   }
 
-  /**
-   * Read the persisted dashboard theme JSON stored under the `theme_config`
-   * key of the organisation web config (`/organisation/web/config/:domain`).
-   * Returns the parsed value (or null when the key is absent). Reuses the same
-   * endpoint as getOrgConfig so branding/theme come from a single source.
-   */
-  async getThemeConfig(domain?: string) {
-    const cfg = await this.getOrgConfig(domain);
-    const raw = cfg?.theme_config ?? cfg?.THEME_CONFIG ?? null;
+  async saveOrgSettings(settings: Record<string, any>) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(API_URLS_LEGACY.org_settings_forui, {
+      [appVariables.businessTagID]: this.workspaceInstance.businessTagId,
+    });
+    return this.handleRequest("put", url, { OrgSettings: settings }, false);
+  }
+
+  async getThemeConfig() {
+    const settings = await this.getOrgSettings();
+    const raw = settings?.Theme ?? null;
     if (raw == null) return null;
     try {
       return typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -740,19 +738,10 @@ class WorkflowModule {
     }
   }
 
-  /**
-   * Persist the dashboard theme JSON under the `theme_config` key on the
-   * organisation web config endpoint (`/organisation/web/config/:domain`) —
-   * the same endpoint used for reading. Callers should treat failure as
-   * non-fatal and keep a local copy, since the backend may not yet implement
-   * this key.
-   */
-  async saveThemeConfig(themeConfig: any, domain?: string) {
-    const sub = domain || this.workspaceInstance?.businessDomain || "";
-    const url = `${API_URLS_LEGACY.workspace}/${sub}`;
+  async saveThemeConfig(themeConfig: any) {
     const payload =
       typeof themeConfig === "string" ? JSON.parse(themeConfig) : themeConfig;
-    return this.handleRequest("post", url, { theme_config: payload }, false);
+    return this.saveOrgSettings({ Theme: payload });
   }
 }
 
