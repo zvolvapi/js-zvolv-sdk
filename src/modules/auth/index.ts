@@ -1,12 +1,21 @@
 import { AxiosInstance } from "axios";
 import { API_URLS_LEGACY } from "../../helpers/constants";
-import { getClientType, getParsedLocalStorageItem } from "../../helpers/client";
+import { getClientType } from "../../helpers/client";
+import {
+  getServerKey,
+  notifyAuthCryptReady,
+  persistUserToStorage,
+  readUserFromStorage,
+  setServerKey,
+  upgradeStoredPii,
+} from "../../helpers/crypto";
 import { sha512 } from "js-sha512";
 import { User } from "../../interfaces/auth.interface";
 import { Workspace } from "../../interfaces/workspace.interface";
 
 class AuthModule {
   public userInstance?: User;
+  private authCryptPromise?: Promise<void>;
 
   constructor(
     private httpClient: AxiosInstance,
@@ -31,11 +40,9 @@ class AuthModule {
       );
       if (response.status === 200 && response.data.error === false) {
         this.userInstance = response.data;
-        localStorage.setItem("user", JSON.stringify(response.data));
-        let AkitaStores = getParsedLocalStorageItem('AkitaStores', {}) as Record<string, any>
-        AkitaStores['auth'] = response.data
-        localStorage.setItem("AkitaStores", JSON.stringify(AkitaStores));
+        persistUserToStorage(response.data);
         this.setToken();
+        void this.fetchAuthCrypt();
         return response.data;
       } else {
         throw new Error(response.data.message || "Login failed");
@@ -46,11 +53,13 @@ class AuthModule {
   }
 
   init() {
-    if (localStorage.getItem("user")) {
-      this.userInstance = JSON.parse(localStorage.getItem("user") as string);
+    const stored = readUserFromStorage();
+    if (stored) {
+      this.userInstance = stored as User;
     }
     if (this.userInstance) {
       this.setToken();
+      void this.fetchAuthCrypt();
     }
   }
 
@@ -60,8 +69,49 @@ class AuthModule {
     ] = `Bearer ${this.userInstance?.loginToken}`;
   }
 
+  fetchAuthCrypt(): Promise<void> {
+    if (getServerKey()) return Promise.resolve();
+    if (!this.authCryptPromise) {
+      this.authCryptPromise = this.requestAuthCrypt().finally(() => {
+        this.authCryptPromise = undefined;
+      });
+    }
+    return this.authCryptPromise;
+  }
+
+  private async requestAuthCrypt(): Promise<void> {
+    try {
+      if (!this.userInstance?.loginToken) return;
+      const headers = {
+        jwt: this.userInstance.loginToken,
+        businessDomain: this.workspaceInstance.businessDomain,
+        device: getClientType(),
+        businessTagId: this.workspaceInstance.businessTagId,
+      };
+      const response = await this.httpClient.get(API_URLS_LEGACY.authData, {
+        headers,
+      });
+      const authCrypt =
+        response?.data?.AUTH_CRYPT ?? response?.data?.data?.AUTH_CRYPT;
+      if (response.status === 200 && authCrypt) {
+        setServerKey(String(authCrypt));
+        upgradeStoredPii();
+        const refreshed = readUserFromStorage();
+        if (refreshed) {
+          this.userInstance = refreshed as User;
+        }
+        notifyAuthCryptReady();
+      } else {
+        console.error("AUTH_CRYPT missing from auth/data");
+      }
+    } catch (error) {
+      console.error("Failed to fetch AUTH_CRYPT", error);
+    }
+  }
+
   async logout(): Promise<any> {
     this.userInstance = undefined;
+    setServerKey(null);
     localStorage.clear();
   }
 }

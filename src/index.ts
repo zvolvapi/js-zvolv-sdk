@@ -1,5 +1,7 @@
 import axios, { AxiosInstance } from "axios";
 import AuthModule from "./modules/auth";
+
+export * from "./helpers/crypto";
 import WorkspaceModule from "./modules/workspace";
 import AnalyticsModule from "./modules/analytics";
 import FormModule from "./modules/forms";
