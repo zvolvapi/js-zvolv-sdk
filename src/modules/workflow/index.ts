@@ -1,5 +1,5 @@
 import { AxiosInstance } from "axios";
-import { createApiUrl, getClientType, isLegacyId } from "../../helpers/client";
+import { createApiUrl, createBifrostUrl, getClientType, isLegacyId } from "../../helpers/client";
 import { Workspace } from "../../interfaces/workspace.interface";
 import {
   API_URLS,
@@ -610,11 +610,10 @@ class WorkflowModule {
   }
 
   async invokeAgent(body: any, flowId?: string, agentId?: string) {
-    let url = API_URLS.invoke_agent;
-    const params: string[] = [];
-    if (flowId) params.push(`flow_id=${encodeURIComponent(flowId)}`);
-    if (agentId) params.push(`agent_id=${encodeURIComponent(agentId)}`);
-    if (params.length) url += `?${params.join("&")}`;
+    const url = createBifrostUrl(API_URLS.invoke_agent, {
+      flow_id: flowId,
+      agent_id: agentId,
+    });
     return this.handleRequest("post", url, body, true);
   }
 

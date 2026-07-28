@@ -85,7 +85,7 @@ export const API_URLS = {
   submission_history: '/api/v1/submissions/history/:formSubmissionId',
   batch_submission: '/api/v1/submissions/batch',
   media_upload: '/media/upload',
-  invoke_agent: '/zwall/v3/agent_manager/',
+  invoke_agent: '/zwall/agent/invoke/:flow_id/:agent_id',
 
   // Form runtime — added for parity with Angular zvolv-web z-form module.
   single_submission: '/api/v1/submissions/:id',
