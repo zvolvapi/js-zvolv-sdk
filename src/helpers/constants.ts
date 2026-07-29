@@ -10,6 +10,7 @@ export const API_URLS_LEGACY = {
   all_dashboards: "/rest/v17/analytics/reports/get",
   add_dashboard: "/rest/v17/analytics/reports/add",
   edit_dashboard: "/rest/v17/analytics/reports/edit/:reportId",
+  edit_dashboard_sequence: "/rest/v17/analytics/reports/editSequence",
   delete_dashboard: "/rest/v17/analytics/reports/delete/:reportId",
   add_widget: "/rest/v17/analytics/reports/:reportId/widgets/add",
   delete_widget: "/rest/v17/analytics/reports/:reportId/widgets/delete/:WidgetID",

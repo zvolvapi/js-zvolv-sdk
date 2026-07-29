@@ -308,6 +308,12 @@ class WorkflowModule {
     return this.handleRequest("put", url, JSON.parse(body), false);
   }
 
+  async editDashboardSequence(body: any) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(API_URLS_LEGACY.edit_dashboard_sequence);
+    return this.handleRequest("put", url, typeof body === "string" ? JSON.parse(body) : body, false);
+  }
+
   async deleteDashboard(reportId: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     let url = createApiUrl(API_URLS_LEGACY.delete_dashboard);
