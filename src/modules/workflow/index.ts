@@ -458,31 +458,39 @@ class WorkflowModule {
     return this.handleRequest("put", url, body, true);
   }
 
+  private async postMultipart(url: string, formData: FormData, fallbackMessage: string) {
+    // Legacy /rest endpoints authenticate with the `jwt` header set by
+    // getHeaders(false); the Bearer variant is only accepted by Bifrost.
+    // Content-Type is left unset so the browser adds the multipart boundary.
+    const headers = await this.getHeaders(false);
+    let response;
+    try {
+      response = await this.httpClient.request({ method: "post", url, data: formData, headers });
+    } catch (error: any) {
+      const resData = error?.response?.data;
+      throw new Error(
+        resData?.message ??
+          resData?.error_message ??
+          (typeof resData?.error === "string" ? resData.error : null) ??
+          error?.message ??
+          fallbackMessage
+      );
+    }
+    if (response.status === 200 || response.status === 201) return response.data;
+    throw new Error(response.data?.message ?? response.data?.error_message ?? fallbackMessage);
+  }
+
   async dbFileUpload(formId: number, formData: FormData) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     const btId = this.workspaceInstance.businessTagId;
     let url = createApiUrl(API_URLS_LEGACY.db_file_upload);
     url = url.replace(new RegExp(`:${appVariables.businessTagID}`, "g"), btId);
-    const headers = { ...(await this.getHeaders(true)), 'Content-Type': 'multipart/form-data' };
-    try {
-      const response = await this.httpClient.request({ method: "post", url, data: formData, headers });
-      if (response.status === 200 || response.status === 201) return response.data;
-      throw new Error("File upload failed");
-    } catch {
-      throw new Error("File upload failed");
-    }
+    return this.postMultipart(url, formData, "File upload failed");
   }
 
   async dbBulkUploadLegacy(formId: string | number, formData: FormData) {
     const url = createApiUrl(API_URLS_LEGACY.db_bulk_upload, { formId });
-    const headers = { ...(await this.getHeaders(true)), 'Content-Type': 'multipart/form-data' };
-    try {
-      const response = await this.httpClient.request({ method: "post", url, data: formData, headers });
-      if (response.status === 200 || response.status === 201) return response.data;
-      throw new Error("Bulk upload failed");
-    } catch {
-      throw new Error("Bulk upload failed");
-    }
+    return this.postMultipart(url, formData, "Bulk upload failed");
   }
 
   // -------------------------------------------------------------------------
