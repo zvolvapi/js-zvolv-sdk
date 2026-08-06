@@ -6,6 +6,8 @@ export const API_URLS_LEGACY = {
   logout: "/rest/v17/user/logout",
   workspace: "/rest/v17/organisation/web/config",
   org_settings_forui: "/rest/v17/:businessTagId/orgsettings/forui",
+  org_settings_forui_zapp_theme:
+    "/rest/v17/:businessTagId/orgsettings/forui/theme/:zappId",
   workflow: "/rest/v17/workflow",
   all_dashboards: "/rest/v17/analytics/reports/get",
   add_dashboard: "/rest/v17/analytics/reports/add",

@@ -740,9 +740,9 @@ class WorkflowModule {
     return this.handleRequest("put", url, { OrgSettings: settings }, false);
   }
 
-  async getThemeConfig() {
-    const settings = await this.getOrgSettings();
-    const raw = settings?.Theme ?? null;
+  static readonly ORG_THEME_KEY = "org";
+
+  private static parseTheme(raw: any) {
     if (raw == null) return null;
     try {
       return typeof raw === "string" ? JSON.parse(raw) : raw;
@@ -751,10 +751,121 @@ class WorkflowModule {
     }
   }
 
+  async getThemeMap(): Promise<Record<string, any>> {
+    const settings = await this.getOrgSettings();
+    const raw = WorkflowModule.parseTheme(settings?.Theme);
+    if (raw == null || typeof raw !== "object") return {};
+    if ("light" in raw || "dark" in raw) {
+      return { [WorkflowModule.ORG_THEME_KEY]: raw };
+    }
+    return raw;
+  }
+
+  /** Workspace-wide theme (`Theme.org`). */
+  async getThemeConfig() {
+    const map = await this.getThemeMap();
+    return map[WorkflowModule.ORG_THEME_KEY] ?? null;
+  }
+
+  private async saveThemeScope(scopeKey: string, themeConfig: any) {
+    const payload = WorkflowModule.parseTheme(themeConfig) ?? {};
+    let current: Record<string, any> = {};
+    try {
+      current = await this.getThemeMap();
+    } catch {
+      // A workspace with no settings yet reads as empty rather than failing.
+      current = {};
+    }
+    return this.saveOrgSettings({
+      Theme: { ...current, [String(scopeKey)]: payload },
+    });
+  }
+
   async saveThemeConfig(themeConfig: any) {
-    const payload =
-      typeof themeConfig === "string" ? JSON.parse(themeConfig) : themeConfig;
-    return this.saveOrgSettings({ Theme: payload });
+    return this.saveThemeScope(WorkflowModule.ORG_THEME_KEY, themeConfig);
+  }
+
+  /** One zapp's theme, via the dedicated per-zapp endpoint. */
+  async getZappTheme(zappId: string | number) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const id = String(zappId);
+    const url = createApiUrl(API_URLS_LEGACY.org_settings_forui_zapp_theme, {
+      [appVariables.businessTagID]: this.workspaceInstance.businessTagId,
+      zappId: id,
+    });
+    const data = await this.handleRequest("get", url, undefined, false);
+    // The endpoint may answer with the bare theme or with the same OrgSettings
+    // envelope the collection GET returns — accept either.
+    const scoped =
+      data?.OrgSettings?.Theme?.[id] ??
+      data?.Theme?.[id] ??
+      data?.OrgSettings?.Theme ??
+      data?.Theme ??
+      data;
+    return WorkflowModule.parseTheme(scoped);
+  }
+
+  async saveZappTheme(zappId: string | number, themeConfig: any) {
+    return this.saveThemeScope(String(zappId), themeConfig);
+  }
+
+  /** Drop a zapp's overrides so it falls back to the workspace theme. */
+  async deleteZappTheme(zappId: string | number) {
+    let current: Record<string, any> = {};
+    try {
+      current = await this.getThemeMap();
+    } catch {
+      current = {};
+    }
+    const next = { ...current };
+    delete next[String(zappId)];
+    return this.saveOrgSettings({ Theme: next });
+  }
+
+  async uploadBrandingAsset(file: File | Blob, fileName?: string): Promise<string> {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const name = fileName || (file as File)?.name || "asset";
+    const formData = new FormData();
+    formData.append("file", file, name);
+    formData.append("logo", file, name);
+    formData.append("is_permanent", "true");
+
+    const btId = this.workspaceInstance.businessTagId;
+    let url = createApiUrl(API_URLS_LEGACY.db_file_upload);
+    url = url.replace(new RegExp(`:${appVariables.businessTagID}`, "g"), btId);
+
+    const data = await this.postMultipart(url, formData, "Asset upload failed");
+    const uploaded =
+      data?.data?.file_url?.url ?? data?.file_url?.url ?? data?.data?.url ?? data?.url;
+    if (!uploaded) throw new Error("Upload succeeded but no file URL was returned");
+    return String(uploaded);
+  }
+
+  async getBranding() {
+    const settings = await this.getOrgSettings();
+    if (!settings) return null;
+    const bg = settings.BackgroundImg;
+    return {
+      logoUrl: settings.LogoUrl ?? null,
+      alignment: settings.Alignment ?? null,
+      // The settings page stores either the bare URL or a media descriptor.
+      backgroundUrl: (typeof bg === "string" ? bg : bg?.media) ?? null,
+    };
+  }
+
+  async saveBranding(branding: {
+    logoUrl?: string | null;
+    alignment?: string | null;
+    backgroundUrl?: string | null;
+  }) {
+    const payload: Record<string, any> = {};
+    if (branding.logoUrl !== undefined) payload.LogoUrl = branding.logoUrl;
+    if (branding.alignment !== undefined) payload.Alignment = branding.alignment;
+    if (branding.backgroundUrl !== undefined) {
+      payload.BackgroundImg = branding.backgroundUrl;
+    }
+    if (Object.keys(payload).length === 0) return null;
+    return this.saveOrgSettings(payload);
   }
 }
 
