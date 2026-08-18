@@ -52,6 +52,26 @@ class AuthModule {
     }
   }
 
+  async forgotPassword(email: string): Promise<any> {
+    const headers = {
+      jwt: true,
+      device: getClientType(),
+      businessDomain: this.workspaceInstance.businessDomain,
+      businessTagId: this.workspaceInstance.businessTagId,
+    };
+    const response = await this.httpClient.post(
+      API_URLS_LEGACY.forgot_password,
+      { email },
+      { headers }
+    );
+    if (response.status === 200 && response.data?.error === false) {
+      return response.data;
+    }
+    throw new Error(
+      response.data?.message || "Could not send the password reset link"
+    );
+  }
+
   init() {
     const stored = readUserFromStorage();
     if (stored) {

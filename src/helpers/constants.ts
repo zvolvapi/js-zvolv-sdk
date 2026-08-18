@@ -4,6 +4,7 @@
 export const API_URLS_LEGACY = {
   login: "/rest/v17/user/login",
   logout: "/rest/v17/user/logout",
+  forgot_password: "/rest/v17/webapi/user/password",
   workspace: "/rest/v17/organisation/web/config",
   org_settings_forui: "/rest/v17/:businessTagId/orgsettings/forui",
   org_settings_forui_zapp_theme:

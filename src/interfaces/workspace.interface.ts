@@ -8,4 +8,6 @@ export interface Workspace {
     adIntegration?: object;
     twoFALogin?:   boolean;
     onlyOTPLogin?:   boolean;
+    backgroundImg?:   string;
+    alignment?:   string;
 }
