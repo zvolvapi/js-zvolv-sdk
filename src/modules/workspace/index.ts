@@ -4,10 +4,23 @@ import { getClientType } from "../../helpers/client";
 import { Workspace } from "../../interfaces/workspace.interface";
 import AuthModule from "../auth";
 
+const WORKSPACE_CACHE_VERSION = 2;
+
 class WorkspaceModule {
   public workspaceInstance?: Workspace;
 
   constructor(private httpClient: AxiosInstance) {}
+
+  async getConfig(domain?: string): Promise<any> {
+    const sub = domain || this.workspaceInstance?.businessDomain || "";
+    const headers = { device: getClientType() };
+    const url = `${API_URLS_LEGACY.workspace}/${sub}`;
+    const response = await this.httpClient.get(url, { headers });
+    if (response.status === 200 && response.data?.error === false) {
+      return response.data.data;
+    }
+    throw new Error(response.data?.message || "Could not read the org config");
+  }
 
   async init(domain: string): Promise<Workspace> {
     try {
@@ -32,8 +45,13 @@ class WorkspaceModule {
           }
           link.href = faviconUrl;
         }
-        if (domain === workspace.businessDomain) return workspace;
-        else localStorage.removeItem("workspace");
+        if (
+          domain === workspace.businessDomain &&
+          (workspace as any).cacheVersion === WORKSPACE_CACHE_VERSION
+        ) {
+          return workspace;
+        }
+        localStorage.removeItem("workspace");
       }
       const clientType = getClientType();
       const headers = {
@@ -50,6 +68,14 @@ class WorkspaceModule {
           faviconUrl: response.data.data.FAVICON_URL,
           primaryColor: response.data.data.PRIMARY_COLOR,
         };
+        (workspace as any).cacheVersion = WORKSPACE_CACHE_VERSION;
+
+        if (response.data.data.BACKGROUND_URL) {
+          workspace.backgroundImg = response.data.data.BACKGROUND_URL;
+        }
+        if (response.data.data.ALIGNMENT) {
+          workspace.alignment = response.data.data.ALIGNMENT;
+        }
 
         if (response.data.data.hasOwnProperty("AD_INTEGRATION")) {
           workspace.adIntegration = response.data.data.AD_INTEGRATION;

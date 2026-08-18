@@ -2,12 +2,18 @@ import axios, { AxiosInstance } from "axios";
 import AuthModule from "./modules/auth";
 
 export * from "./helpers/crypto";
+export * from "./helpers/apiVersion";
+import { resolveApiVersion, setOdinEnabled } from "./helpers/apiVersion";
 import WorkspaceModule from "./modules/workspace";
 import AnalyticsModule from "./modules/analytics";
 import FormModule from "./modules/forms";
 import SubmissionModule from "./modules/submissions";
 import WorkflowModule from "./modules/workflow";
 import ZaiServicesModule from "./modules/zai";
+
+export interface ZvolvClientOptions {
+  odinEnabled?: boolean | string | number;
+}
 
 export class ZvolvClient {
   private httpClient: AxiosInstance;
@@ -19,9 +25,20 @@ export class ZvolvClient {
   private _workflow?: WorkflowModule;
   private _zaiServices?: ZaiServicesModule;
 
-  constructor(host: string, ssl?: boolean) {
+  constructor(host: string, ssl?: boolean, options?: ZvolvClientOptions) {
+    if (options?.odinEnabled !== undefined) {
+      setOdinEnabled(options.odinEnabled);
+    }
+
     this.httpClient = axios.create({
       baseURL: `${ssl ? "https" : "http"}://${host}`,
+    });
+
+    this.httpClient.interceptors.request.use((config) => {
+      if (config.url) {
+        config.url = resolveApiVersion(config.url);
+      }
+      return config;
     });
   }
 
