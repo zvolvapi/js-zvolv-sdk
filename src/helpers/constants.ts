@@ -84,6 +84,10 @@ export const API_URLS = {
   db_data_sync_single: '/api/v1/submissions/sync/request/:id/:onlyCountReq',
   db_data_sync_all: '/api/v1/submissions/sync/request/all',
 
+  db_delete_form: '/api/v1/forms/:id',
+
+  automations_all: '/api/v1/automations',
+  automations_execute: '/api/v1/automations/execute/:id',
   invoke_triggers: '/api/v1/automations/triggers/invoke/:id',
   invoke_nuclio_automation: '/nuclio/function_invocations',
   submission_history: '/api/v1/submissions/history/:formSubmissionId',

@@ -520,6 +520,45 @@ class WorkflowModule {
     return this.handleRequest("post", API_URLS.db_delete_submissions_grpc, { formId, submissionIds, isTruncate }, true);
   }
 
+  async dbDeleteForm(formId: string | number) {
+    const url = createApiUrl(API_URLS.db_delete_form, { id: formId });
+    return this.handleRequest("delete", url, undefined, true);
+  }
+
+  // -------------------------------------------------------------------------
+  // Automations
+  // -------------------------------------------------------------------------
+
+  /** GET /api/v1/automations - every automation on the workspace. */
+  async getAutomations() {
+    return this.handleRequest("get", API_URLS.automations_all, undefined, true);
+  }
+
+  /** POST /api/v1/automations/execute/:id - runs an automation and waits for its result. */
+  async executeAutomation(automationId: string | number, body: any = {}) {
+    const url = createApiUrl(API_URLS.automations_execute, { id: automationId });
+    return this.handleRequest("post", url, body, true);
+  }
+
+ 
+  async getZappForms(
+    zappId: string | number,
+    type: string | null = "MASTER",
+    skip = 0,
+    limit = 1000
+  ) {
+    const filter: any[] = [
+      { name: "zappId", arr_value: [String(zappId)], operator: "in" },
+    ];
+    if (type) filter.push({ name: "type", value: type, operator: "eq" });
+    return this.handleRequest(
+      "post",
+      API_URLS.fetch_all_forms,
+      { skip, limit, sort: { field: "title", order: 1 }, filter, filterOperator: "$and" },
+      true
+    );
+  }
+
   async dbGetBulkExport(formId: string | number, exportType: 'csv' | 'xlsx'): Promise<Blob> {
     const url = createApiUrl(API_URLS.db_bulk_export_grpc, { id: formId, type: exportType });
     const headers = await this.getHeaders(true);

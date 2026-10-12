@@ -1,124 +1,133 @@
-<!-- # js-zvolv-sdk
-Javascript Software Development Kit for Zvolv APIs
+# @zestl/zvolv-js-sdk
 
+JavaScript / TypeScript SDK for the Zvolv APIs: workspace, session, forms, submissions,
+dashboards, permissions, automations and ZAI.
 
-To test using node and typescript.
-Install tsx globally
-npm install --global tsx   
+> Building a UI? Use [`@zestl/zvolv-widgets`](https://www.npmjs.com/package/@zestl/zvolv-widgets)
+> on top of this SDK. It owns queries, filters, aggregation, forms and the submission body; the SDK
+> gives it the session and the HTTP client. Call the SDK directly only for session, dashboards and
+> permissions.
 
-Run sample script using tsx
-tsx --no-cache ./sample.ts  -->
-
-# ZvolvClient SDK
-
-ZvolvClient SDK is a JavaScript Software Development Kit for interacting with the Zvolv API.
-
-
-To test using node and typescript. Install tsx globally npm install --global tsx Run sample script using tsx tsx --no-cache ./sample.ts 
-
-
-## Installation
-
-To install ZvolvClient SDK, use npm:
+## Install
 
 ```bash
-npm i zvolv-sdk
-
-```
-# Usage
-## Initialize ZvolvClient
-
-constructor(baseURL: string)
-
-Initializes the ZvolvClient with the base URL of the Zvolv server.
-
-Once the package is installed, you can import the library using import or require approach:
-
-```javascript
-import { ZvolvClient } from "zvolv-client-sdk";
-
-const client = new ZvolvClient('http://twig-me.com');
-
+npm i @zestl/zvolv-js-sdk
 ```
 
-## Initialize Workspace
+## Client, workspace and session
 
-methods for interacting with workspaces.
+```ts
+import { ZvolvClient } from "@zestl/zvolv-js-sdk";
 
-```javascript
-
-try {
-    const workspace = await client.workspace.init('kapilwf');
-} catch (error) {
-    console.error('Error initializing workspace:', error);
-}
-
-```
-## Perform Authentication
-
-methods for authentication.
-
-```javascript
-try {
-    const login = await client.auth.login('email', 'pass');
-} catch (error) {
-    console.error('Error performing login:', error);
-}
-```
-## Perform Analytics Search
-methods for performing analytics-related operations.
-
-```javascript
-try {
-    const analytics = await client.analytics.search('65c470f6dab3102c930725ca', { query: { match_all: {} }, from: 0, size: 20, track_total_hits: true });
-} catch (error) {
-    console.error('Error performing analytics search:', error);
-}
-
-```
-## Fetch Form
-
-methods for fetching form details.
-
-```javascript
-try {
-    const formId = '65c470f6dab3102c930725ca'; // Replace with the appropriate form ID
-    const form = await client.form.fetch(formId);
-} catch (error) {
-    console.error('Error fetching form:', error);
-}
-```
-## Create Submission
-
-methods for creating submissions.
-
-Define query parameters for the submission creation request.
-
-If not provided, default values of false will be used for skipAutomation and skipValidations.
-
-```javascript
-try {
-    const submissionData = {
-        formId: '65c470f6dab3102c930725ca', // Replace with the appropriate formId
-        elements: [
-            {
-                label: 'Name',
-                value: 'Test'
-            }
-        ]
-    };
-
-    const queryParams = {
-        skipAutomation: true,
-        skipValidations: false,
-    };
-
-    const createdSubmission = await client.submission.create(submissionData, queryParams);
-} catch (error) {
-    console.error('Error creating submission:', error);
-}
+const client = new ZvolvClient("acme.zvolv.in", true);   // host, ssl
+await client.workspace.init("acme");                      // the workspace domain; required before auth
+await client.auth.login(email, password);                 // or…
+client.auth.init();                                       // …restore the stored session (same-origin apps)
+await client.auth.logout();
 ```
 
-# License
+Order matters: `workspace.init` → `auth.*` → everything else (`auth` throws before `workspace.init`).
+Inside a Zvolv-hosted app (`/v6/<app>/…`) the user is already signed in: use `auth.init()`; with no
+session, send the user to `/v5/login`.
 
-This project is licensed under the MIT License. See the [LICENSE](https://github.com/zvolvapi/js-zvolv-sdk/blob/main/LICENSE) file for details.
+### The signed-in user (encrypted)
+
+The session is stored encrypted (`enc::…`). Decrypt before reading any field:
+
+```ts
+import { decryptAuthObject, decryptValue, readUserFromStorage, AUTH_CRYPT_READY_EVENT } from "@zestl/zvolv-js-sdk";
+
+const u: any = decryptAuthObject(client.auth.userInstance);
+const role = String(u.profile?.role_details?.role ?? u.role ?? "").toLowerCase();   // "admin" | "builder" | …
+const isAdmin = role === "admin";
+const userId = Number(u.id ?? u.user_id ?? u.profile?.id);          // what people fields store: [userId]
+const groupId = Number(u.userGroupId ?? u.profile?.userGroupId);    // the user's own user group
+```
+
+Values encrypted with the server key can be read only after the SDK has fetched it; it fires
+`window` event `AUTH_CRYPT_READY_EVENT` (`"zvAuthCryptReady"`) then. Re-read the user on that event.
+
+## Role-based access
+
+| What | Where it lives | How to check |
+| --- | --- | --- |
+| Admin | the user's `profile.role_details.role === "admin"` | decrypt the user (above) |
+| User group (role) | `userGroupId`; roles are user groups | `workflow.getUserGroup`, `workflow.getUserGroupList` |
+| Who can open a dashboard | dashboard `ViewPerm` / `EditPerm` (user-group ids, `-1` = everyone); `getDashboards` also returns per-user `permissions` (`VIEW_PERMISSION`, `EDIT_PERMISSION`) | admins see all; else `permissions` holds VIEW or EDIT (a `HideInMobileApp: "YES"` dashboard needs EDIT). `@zestl/zvolv-widgets` has `canViewDashboard` / `visibleDashboardTree` |
+| Who can edit a zapp | the zapp's permissions | `workflow.checkPermissions(zappId, ["EDIT_WORKFLOW_TYPE"])` → the granted ops |
+| Who can submit / edit a form | the form's role lists (server-enforced) | the submission call fails with the server's message: show it |
+| Widget visibility | widget `AllowedUserGroups` (`[-1]` = everyone) | |
+
+`checkPermissions(resourceId, opTypes)` op types: `ADD_MASTER_FORM`, `EDIT_MASTER_FORM`,
+`VIEW_MASTER_FORM`, `ADD_MASTER_FORM_SUB`, `EDIT_MASTER_FORM_SUB`, `ADD_ANALYTICS_REPORT`,
+`ADD_WORKFLOW_TYPE`, `EDIT_WORKFLOW_TYPE`, `ADD_WORKFLOW_PROJECT`, `DEL_WORKFLOW_PROJECT`.
+
+## Dashboards (an app's pages)
+
+```ts
+const list = await client.workflow.getDashboards(String(zappId));      // .data.elements: ReportID, Title, Description, SequenceID, ChildReportIDs, ViewPerm, EditPerm, permissions, MobileOnly, HideInMobileApp
+const one  = await client.workflow.getDashboard(String(dashId), String(zappId));   // .data.elements[0].widgets
+```
+
+Load a dashboard's widgets when its page opens (not all at start), and render them through
+`@zestl/zvolv-widgets` (`normalizeWidget`, `useWidgetData`, `ZvolvWidget`).
+Admin tools: `addDashboard`, `editDashboard`, `editDashboardSequence`, `deleteDashboard`,
+`addWidget`, `bulkaddWidget`, `editWidget`, `updateWidget`, `deleteWidget`, `getSingleWidget`.
+
+## Forms and submissions
+
+```ts
+const form = await client.form.fetch(formId);
+const created = await client.submission.create({ formId, elements: [{ label: "Name", value: "Test" }] },
+  { skipAutomation: false, skipValidations: false });
+const sub = await client.submission.fetchById(submissionId);
+await client.submission.update(submissionId, { formId, elements: [...] });
+```
+
+For app code prefer `@zestl/zvolv-widgets`: `<ZvolvForm>` for forms, and `fetchSubmission` +
+`updateSubmission` / `createSubmission` for in-place edits. They send the exact body the platform
+expects (element ids, lookups, people, files, sheets, formulas).
+
+Other form calls on `client.workflow`: `getSingleForm`, `getZappForms(zappId)`, `getAllForm`,
+`getSingleSubmission`, `getSubmissionAll`, `getSubmissionHistory`, `batchSubmission`,
+`mediaUpload`, `getFormSubmissionFieldValues`, `getFieldDistinctValues`.
+
+## Search and analytics
+
+```ts
+await client.workflow.elasticSearch(JSON.stringify(query));          // what @zestl/zvolv-widgets uses
+await client.analytics.search(formId, { query: { match_all: {} }, from: 0, size: 20 });
+```
+
+Don't hand-write queries in app code; `@zestl/zvolv-widgets` generates them from a data source.
+
+## Automations, agents, ZAI
+
+| Call | Does |
+| --- | --- |
+| `workflow.invokeTriggers(triggerId, body)` | runs a form/button automation |
+| `workflow.invokeNuclioAutomation(name, body)` | runs a ZENO automation |
+| `workflow.executeAutomation(id, body)`, `getAutomations()` | zapp automations |
+| `workflow.invokeAgent(body, flowId?, agentId?)` | an AI agent |
+| `zaiServices.sendMsg(message, playgroundId?)` | ZAI chat |
+
+## Tasks
+
+`workflow.getTasks(filter, page)`, `getSingleTask(id)`, `getAllTasks`, `editTask`, `editBulkTasks`,
+`createAdhocTask`, `getAnalyticsTasks`.
+
+## Organisation and theme
+
+`workflow.getOrgConfig`, `getOrgSettings`, `saveOrgSettings`, `getThemeConfig`, `getZappTheme`,
+`saveZappTheme`, `getBranding`, `saveBranding`, `uploadBrandingAsset`.
+
+## Local testing
+
+```bash
+npm install --global tsx
+tsx --no-cache ./sample.ts
+```
+
+## License
+
+MIT. See [LICENSE](https://github.com/zvolvapi/js-zvolv-sdk/blob/main/LICENSE).
