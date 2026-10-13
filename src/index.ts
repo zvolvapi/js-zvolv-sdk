@@ -19,10 +19,43 @@ export class ZvolvClient {
   private _workflow?: WorkflowModule;
   private _zaiServices?: ZaiServicesModule;
 
-  constructor(host: string, ssl?: boolean) {
-    this.httpClient = axios.create({
-      baseURL: `${ssl ? "https" : "http"}://${host}`,
-    });
+  private sessionGuardInstalled = false;
+
+  /**
+   * @param host  The API host ("acme.zvolv.in") or a full origin ("https://acme.zvolv.in").
+   *              A trailing "/rest" or "/" is ignored. A full origin keeps its own protocol.
+   * @param ssl   Protocol for a bare host (default true = https). Ignored when `host` has a protocol.
+   */
+  constructor(host: string, ssl: boolean = true) {
+    this.httpClient = axios.create({ baseURL: ZvolvClient.baseUrl(host, ssl) });
+  }
+
+  /** "acme.zvolv.in" | "https://acme.zvolv.in/rest/" → "https://acme.zvolv.in". */
+  static baseUrl(host: string, ssl: boolean = true): string {
+    const raw = String(host ?? "").trim().replace(/\/+$/, "").replace(/\/rest$/, "");
+    if (!raw) throw new Error("ZvolvClient: host is required (e.g. \"acme.zvolv.in\")");
+    if (/^https?:\/\//i.test(raw)) return raw;
+    return `${ssl ? "https" : "http"}://${raw}`;
+  }
+
+  /**
+   * Builds a client from an app's config.json: { HOST, PROTOCOL?, DOMAIN }.
+   * HOST is the workspace API host; when it is empty the current page's origin is used
+   * (browser only), so a build served from the workspace calls its own domain.
+   */
+  static fromConfig(cfg: { HOST?: string; PROTOCOL?: string; DOMAIN?: string }): ZvolvClient {
+    const host = String(cfg?.HOST ?? "").trim();
+    if (host) return new ZvolvClient(host, (cfg.PROTOCOL ?? "https://").startsWith("https"));
+    if (typeof window !== "undefined" && window.location?.host) {
+      return new ZvolvClient(`${window.location.protocol}//${window.location.host}`);
+    }
+    if (cfg?.DOMAIN) return new ZvolvClient(`${cfg.DOMAIN}.zvolv.in`, true);
+    throw new Error("ZvolvClient.fromConfig: HOST (or DOMAIN) is required");
+  }
+
+  /** The origin every request goes to. */
+  get baseURL(): string {
+    return String(this.httpClient.defaults.baseURL ?? "");
   }
 
   get workspace() {
@@ -125,15 +158,19 @@ export class ZvolvClient {
         );
       }
     }
-    this.httpClient.interceptors.response.use((response) => {
-      if (response.data.error && response.data.error_code === 3) {
-        if (this._auth) {
-          this._auth.userInstance = undefined;
+    // Install the expired-session guard once (it used to be added on every module access).
+    if (!this.sessionGuardInstalled) {
+      this.sessionGuardInstalled = true;
+      this.httpClient.interceptors.response.use((response) => {
+        if (response?.data?.error && response.data.error_code === 3) {
+          if (this._auth) {
+            this._auth.userInstance = undefined;
+          }
+          if (typeof localStorage !== "undefined") localStorage.clear();
+          if (typeof window !== "undefined") window.location.reload();
         }
-        localStorage.clear();
-        window.location.reload();
-      }
-      return response;
-    });
+        return response;
+      });
+    }
   }
 }

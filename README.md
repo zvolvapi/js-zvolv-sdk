@@ -20,6 +20,10 @@ npm i @zestl/zvolv-js-sdk
 import { ZvolvClient } from "@zestl/zvolv-js-sdk";
 
 const client = new ZvolvClient("acme.zvolv.in", true);   // host, ssl
+// or a full origin: new ZvolvClient("https://acme.zvolv.in")
+// or straight from an app's public/config.json ({ HOST, PROTOCOL, DOMAIN }):
+// const client = ZvolvClient.fromConfig(config);   // HOST "" → the page's own origin
+// client.baseURL tells you where every request goes.
 await client.workspace.init("acme");                      // the workspace domain; required before auth
 await client.auth.login(email, password);                 // or…
 client.auth.init();                                       // …restore the stored session (same-origin apps)
@@ -131,3 +135,11 @@ tsx --no-cache ./sample.ts
 ## License
 
 MIT. See [LICENSE](https://github.com/zvolvapi/js-zvolv-sdk/blob/main/LICENSE).
+
+
+## Changes in 1.1.0
+
+- `new ZvolvClient(host, ssl = true)` accepts a bare host or a full origin (`https://acme.zvolv.in`, `/rest` and trailing `/` ignored); `ssl` now defaults to `true`. `ZvolvClient.baseUrl(host, ssl)` and `client.baseURL` expose the origin.
+- `ZvolvClient.fromConfig({ HOST, PROTOCOL, DOMAIN })` builds a client from an app's `config.json`, so apps call the configured workspace domain, never `localhost`.
+- The expired-session response guard is installed once per client (it was added again on every `client.workflow` / `client.form` / … access).
+- `submission.fetchById` / `submission.update` (UUID ids) use `/api/v1/submissions/:id`, the same endpoint as `workflow.getSingleSubmission` and `@zestl/zvolv-widgets`.

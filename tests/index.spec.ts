@@ -12,7 +12,17 @@ describe('ZvolvClient', () => {
     // You can add more checks here to ensure the httpClient is set up correctly
   });
 
-  // Add more tests here as needed
+  it('builds the base URL from a host or a full origin', () => {
+    expect(ZvolvClient.baseUrl('acme.zvolv.in')).to.equal('https://acme.zvolv.in');
+    expect(ZvolvClient.baseUrl('acme.zvolv.in', false)).to.equal('http://acme.zvolv.in');
+    expect(ZvolvClient.baseUrl('https://acme.zvolv.in/rest/')).to.equal('https://acme.zvolv.in');
+    expect(new ZvolvClient('https://api.zvolv.com').baseURL).to.equal('https://api.zvolv.com');
+  });
+
+  it('builds a client from config.json', () => {
+    expect(ZvolvClient.fromConfig({ HOST: 'acme.zvolv.in', PROTOCOL: 'https://' }).baseURL).to.equal('https://acme.zvolv.in');
+    expect(ZvolvClient.fromConfig({ HOST: '', DOMAIN: 'acme' }).baseURL).to.equal('https://acme.zvolv.in');
+  });
 });
 
 // describe('NPM Package', () => {
