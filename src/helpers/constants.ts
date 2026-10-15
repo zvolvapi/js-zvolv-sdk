@@ -118,6 +118,20 @@ export const TASK_API_URLS_LEGACY = {
   edit_task: '/rest/v17/tasks/edit/:businessTagId',
   edit_bulk_tasks: '/rest/v17/tasks/bulk/edit/:businessTagId',
   create_adhoc_task: '/rest/v17/org/:businessTagId/workflow/addtask/stage',
+  // zvolv-web z-task: an ADHOC task on a new-framework record moves on after its record is submitted
+  adhoc_status_change: '/rest/v17/tasks/:WorkflowID/:TaskID/adhoc/status/edit/:MidgardSubmissionID',
+  // the tasks of one workflow (project): dependencies, explorer, mind map
+  workflow_tasks: '/rest/v17/tasks/:businessTagId/workflow/:WorkflowID',
+  // assignee / escalation picker: user groups
+  usergroup_autosearch: '/rest/v17/usergroups/autosearch/:businessTagId',
+  // the workspace's legacy MASTER forms (the forms a task can be created on)
+  forms_of_type: '/rest/v17/:businessTagId/formdetails/formtype/:FormType',
+};
+
+// New-engine ("valkyrie") tasks, addressed by UUID
+export const VALKYRIE_TASK_API_URLS = {
+  get_task: '/api/v1/tasks/:taskId',
+  edit_task: '/api/v1/tasks',
 };
 
 export const appVariables = {

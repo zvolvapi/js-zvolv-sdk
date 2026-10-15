@@ -117,8 +117,21 @@ Don't hand-write queries in app code; `@zestl/zvolv-widgets` generates them from
 
 ## Tasks
 
-`workflow.getTasks(filter, page)`, `getSingleTask(id)`, `getAllTasks`, `editTask`, `editBulkTasks`,
-`createAdhocTask`, `getAnalyticsTasks`.
+| Call | Does |
+| --- | --- |
+| `workflow.getAnalyticsTasks(query)` | the signed-in user's tasks (search index; catches up a few seconds after a change) |
+| `getTasks(filter, page)`, `getAllTasks`, `getSingleTask(id)` | legacy lists / one task + its status log (`elements[0]`, `elements[1].logs`) |
+| `editTask(body)`, `editBulkTasks(body)` | `{ TaskID, Status \| UserGroupIDLevel1..3 \| StartDate \| EndDate }` |
+| `createAdhocTask(body)` | `{ Title, Description, form_id, WorkflowTypeID, StartDate, Duration, UserGroupIDLevel1, MidgardSubmissionID }` — Start + Duration, never all three with EndDate; for a new-framework form save the record first and pass its id as `MidgardSubmissionID` |
+| `adhocTaskStatusChange(wid, taskId, midgardSubmissionId)` | after an ad-hoc task's record is submitted (zvolv-web does this; without it the task stays Active) |
+| `getWorkflowTasks(wid, filter?)` | a project's tasks (`{ stageCodes }` for dependencies) |
+| `searchUserGroups(text)` | assignee / escalation picker (`select` = UserGroupID) |
+| `getFormsOfType("MASTER")` + `getAllNewForms(query)` | the forms a task can be created on |
+| `getValkyrieTask(uuid)`, `editValkyrieTask(uuid, status)` | new-engine tasks (UUID ids) |
+| `getSubmissionFormId(submissionId)` | the form a task's record belongs to |
+
+Task writes use the legacy (jwt) headers, so they also work from a local dev origin (no `domain` header in the CORS preflight).
+Apps should not call these directly: `@zestl/zvolv-widgets` wraps them (`useTaskList`, `TaskDetail`, `TaskView`, `useCreateTaskFlow`).
 
 ## Organisation and theme
 

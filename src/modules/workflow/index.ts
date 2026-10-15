@@ -6,6 +6,7 @@ import {
   API_URLS_LEGACY,
   TASK_API_URLS,
   TASK_API_URLS_LEGACY,
+  VALKYRIE_TASK_API_URLS,
   appVariables,
 } from "../../helpers/constants";
 import AuthModule from "../auth";
@@ -645,11 +646,61 @@ class WorkflowModule {
     return this.handleRequest("post", url, body, true);
   }
 
-  /** Create an ad-hoc task */
+  /**
+   * Create an ad-hoc task. Body as zvolv-web sends it: { Title, Description, form_id, WorkflowTypeID | WorkflowID,
+   * StartDate, Duration (Start + Duration — never Start + End + Duration), UserGroupIDLevel1..3, MidgardSubmissionID
+   * (the record already saved on a new-framework form) }. Legacy (jwt) headers: works from a local dev origin too.
+   */
   async createAdhocTask(body: any) {
     if (!this.workspaceInstance) throw new Error("Workspace not initialized");
     const url = createApiUrl(TASK_API_URLS_LEGACY.create_adhoc_task, { businessTagId: this.workspaceInstance.businessTagId });
-    return this.handleRequest("post", url, body, true);
+    return this.handleRequest("post", url, body, false);
+  }
+
+  /** zvolv-web: after the record of an ADHOC task on a new-framework form is submitted (not a draft), move the task on. */
+  async adhocTaskStatusChange(workflowId: number | string, taskId: number | string, midgardSubmissionId: string) {
+    const url = createApiUrl(TASK_API_URLS_LEGACY.adhoc_status_change, { WorkflowID: workflowId, TaskID: taskId, MidgardSubmissionID: midgardSubmissionId });
+    return this.handleRequest("post", url, {}, false);
+  }
+
+  /** The tasks of one workflow (project); `filter` e.g. { stageCodes: ["S1"] } for dependencies. */
+  async getWorkflowTasks(workflowId: number | string, filter: any = {}) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(TASK_API_URLS_LEGACY.workflow_tasks, { businessTagId: this.workspaceInstance.businessTagId, WorkflowID: workflowId });
+    return this.handleRequest("get", `${url}?filter=${encodeURIComponent(JSON.stringify(filter))}`, undefined, false);
+  }
+
+  /** User groups matching a text (assignee / escalation pickers): elements[{ select: UserGroupID, title, … }]. */
+  async searchUserGroups(searchQuery: string) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(TASK_API_URLS_LEGACY.usergroup_autosearch, { businessTagId: this.workspaceInstance.businessTagId });
+    return this.handleRequest("post", url, { searchQuery }, false);
+  }
+
+  /** The workspace's legacy forms of a type (e.g. "MASTER") — with getAllNewForms, the forms a task can be created on. */
+  async getFormsOfType(formType: string) {
+    if (!this.workspaceInstance) throw new Error("Workspace not initialized");
+    const url = createApiUrl(TASK_API_URLS_LEGACY.forms_of_type, { businessTagId: this.workspaceInstance.businessTagId, FormType: formType });
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  /** A new-engine task by UUID. */
+  async getValkyrieTask(taskUuid: string) {
+    const url = createApiUrl(VALKYRIE_TASK_API_URLS.get_task, { taskId: taskUuid });
+    return this.handleRequest("get", url, undefined, false);
+  }
+
+  /** Change a new-engine task's status (e.g. "ON_HOLD"). */
+  async editValkyrieTask(taskUuid: string, status: string) {
+    return this.handleRequest("put", VALKYRIE_TASK_API_URLS.edit_task, { uuid: taskUuid, status: String(status).toUpperCase().replace(/\s+/g, "_") }, true);
+  }
+
+  /** The form a record (submission) belongs to — a task carries only its record's id. */
+  async getSubmissionFormId(submissionId: string): Promise<string> {
+    const data: any = await this.getSingleSubmission(submissionId);
+    const d = data?.data ?? data;
+    const raw = d?.elements?.[0] ?? d;
+    return String(raw?.formId ?? raw?.FormID ?? raw?.form_id ?? d?.formId ?? "");
   }
 
   async invokeTriggers(triggerId: string, body: any) {
