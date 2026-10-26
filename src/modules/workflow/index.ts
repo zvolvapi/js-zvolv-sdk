@@ -7,16 +7,33 @@ import {
   TASK_API_URLS,
   TASK_API_URLS_LEGACY,
   VALKYRIE_TASK_API_URLS,
+  USERGROUPS_INDEX,
+  BATCH_SUBMISSION_CHUNK,
   appVariables,
 } from "../../helpers/constants";
+import {
+  MediaRef,
+  MediaUploadOptions,
+  MediaUploadResult,
+  UploadedMedia,
+  isBlockedUpload,
+  fileExtension,
+} from "../../helpers/media";
+import { BatchOperation, BatchSubmissionResult } from "../../interfaces/submission.interface";
+import { BatchSubmissionError } from "../../helpers/batch";
+import { UserGroupMembership } from "../../interfaces/auth.interface";
 import AuthModule from "../auth";
 import { Form } from "../../interfaces/form.interface";
 
 class WorkflowModule {
+  private membershipCache = new Map<number, Promise<UserGroupMembership[]>>();
+
   constructor(
     private httpClient: AxiosInstance,
     private workspaceInstance?: Workspace,
-    private auth?: AuthModule
+    private auth?: AuthModule,
+    /** Builds a media URL (client.mediaUrl); set by ZvolvClient. */
+    private mediaUrlBuilder?: (ref: MediaRef, opts?: { withToken?: boolean }) => string
   ) {}
 
   private async getHeaders(authRequired = false): Promise<Record<string, any>> {
@@ -726,23 +743,219 @@ class WorkflowModule {
     return this.handleRequest("post", url, body, true);
   }
 
-  async batchSubmission(body: any, skipSyncRequest = true) {
+  /**
+   * Creates and/or updates many records in one go — the supported path for bulk
+   * writes (zvolv-web's sheet/table widget uses it). Don't call
+   * /api/v1/submissions/batch by hand.
+   *
+   * Body: { operations: [
+   *   { operation: "CREATE", formId, elements },
+   *   { operation: "UPDATE", formId, submissionId, elements },
+   * ] }  — `elements` is the same array a single submission sends.
+   *
+   * Sent in chunks of 100 operations (one request each, in order). Resolves with the
+   * ids of every created/updated record. On a server error it throws a
+   * BatchSubmissionError whose `operationIndex` (0-based, across all chunks) points at
+   * the operation the server refused, when the server says which one.
+   *
+   * Passing the raw `{ operations }` body still works.
+   */
+  async batchSubmission(
+    body: { operations: BatchOperation[] } | BatchOperation[],
+    skipSyncRequest = true
+  ): Promise<BatchSubmissionResult> {
+    const operations: BatchOperation[] = Array.isArray(body) ? body : body?.operations ?? [];
+    if (!Array.isArray(operations) || operations.length === 0) {
+      throw new Error("batchSubmission: at least one operation is required");
+    }
+    operations.forEach((op, i) => {
+      if (!op || (op.operation !== "CREATE" && op.operation !== "UPDATE")) {
+        throw new Error(`batchSubmission: operation ${i} must be "CREATE" or "UPDATE"`);
+      }
+      if (!op.formId) throw new Error(`batchSubmission: operation ${i} has no formId`);
+      if (op.operation === "UPDATE" && !op.submissionId) {
+        throw new Error(`batchSubmission: UPDATE operation ${i} has no submissionId`);
+      }
+    });
+
     let url = API_URLS.batch_submission;
     if (skipSyncRequest) url += `?skipSyncRequest=${skipSyncRequest}`;
-    return this.handleRequest("post", url, body, true);
+
+    const submissionIds: string[] = [];
+    for (let start = 0; start < operations.length; start += BATCH_SUBMISSION_CHUNK) {
+      const chunk = operations.slice(start, start + BATCH_SUBMISSION_CHUNK);
+      let data: any;
+      try {
+        data = await this.handleRequest("post", url, { operations: chunk }, true);
+      } catch (e: any) {
+        throw BatchSubmissionError.fromServerMessage(String(e?.message ?? e), start, submissionIds);
+      }
+      const ids = data?.submissionIds ?? data?.data?.submissionIds ?? [];
+      if (Array.isArray(ids)) {
+        for (const id of ids) if (!submissionIds.includes(String(id))) submissionIds.push(String(id));
+      }
+    }
+    return { submissionIds };
   }
 
-  async mediaUpload(formData: FormData, zapId?: string) {
-    let url = API_URLS.media_upload;
-    if (zapId) url += `?zapid=${zapId}`;
-    const headers = { ...(await this.getHeaders(true)), 'Content-Type': 'multipart/form-data' };
-    try {
-      const response = await this.httpClient.request({ method: "post", url, data: formData, headers });
-      if (response.status === 200 || response.status === 201) return response.data;
-      throw new Error("Media upload failed");
-    } catch {
-      throw new Error("Media upload failed");
+  /**
+   * Uploads one file to the media API (POST /api/v1/media/upload, field "file").
+   *
+   * Contract:
+   * - `input` is a File/Blob, or a FormData that already holds it under "file".
+   * - Progress comes from the browser's own XHR upload `progress` events (axios
+   *   onUploadProgress) — no shims. `onProgress` gets { loaded, total, percent }.
+   * - Resolves only after the request's `load` with `error: false` AND a mediaKey;
+   *   `data` is the object to store in the file field, `url`/`previewUrl` point at it.
+   * - Rejects with the server's own message otherwise (blocked type, size, auth…), or
+   *   with an "aborted" error when `signal` fires. Don't retry a rejection blindly.
+   * - Blocked extensions (BLOCKED_UPLOAD_EXTENSIONS, incl. .zip) are refused before
+   *   anything is sent.
+   *
+   * The old call shape `mediaUpload(formData, zappId)` still works.
+   */
+  async mediaUpload(
+    input: File | Blob | FormData,
+    options?: string | MediaUploadOptions
+  ): Promise<MediaUploadResult> {
+    const opts: MediaUploadOptions =
+      typeof options === "string" || typeof options === "number"
+        ? { zappId: options }
+        : options ?? {};
+
+    let formData: FormData;
+    let file: any;
+    if (typeof FormData !== "undefined" && input instanceof FormData) {
+      formData = input;
+      file = typeof formData.get === "function" ? formData.get("file") : null;
+    } else {
+      file = input;
+      formData = new FormData();
+      formData.append("file", input as Blob, (input as any)?.name ?? "file");
     }
+    const fileName: string = file?.name ?? "";
+    if (!opts.skipExtensionCheck && isBlockedUpload(fileName)) {
+      throw new Error(`Cannot upload files with the extension .${fileExtension(fileName)}`);
+    }
+    const fileSize = Number(file?.size ?? 0);
+
+    let url: string = API_URLS.media_upload;
+    if (opts.zappId !== undefined && opts.zappId !== null && opts.zappId !== "") {
+      url += `?zapid=${encodeURIComponent(String(opts.zappId))}`;
+    }
+    // No Content-Type: axios drops its JSON default for FormData and the browser adds
+    // multipart/form-data with the boundary.
+    const headers = await this.getHeaders(true);
+
+    let response: any;
+    try {
+      response = await this.httpClient.request({
+        method: "post",
+        url,
+        data: formData,
+        headers,
+        signal: opts.signal,
+        onUploadProgress: opts.onProgress
+          ? (e: any) => {
+              const total = Number(e?.total || fileSize || 0);
+              const loaded = Number(e?.loaded || 0);
+              const percent = total > 0 ? Math.min(100, Math.round((loaded / total) * 100)) : 0;
+              try { opts.onProgress!({ loaded, total, percent }); } catch { /* caller's handler */ }
+            }
+          : undefined,
+      });
+    } catch (error: any) {
+      if (error?.code === "ERR_CANCELED" || error?.name === "CanceledError" || error?.name === "AbortError") {
+        const aborted = new Error("Upload aborted");
+        (aborted as any).name = "AbortError";
+        throw aborted;
+      }
+      const resData = error?.response?.data;
+      throw new Error(
+        resData?.message ??
+          resData?.error_message ??
+          (typeof resData?.error === "string" ? resData.error : null) ??
+          error?.message ??
+          "Media upload failed"
+      );
+    }
+
+    const body = response?.data ?? {};
+    if (!(response.status === 200 || response.status === 201) || body.error) {
+      throw new Error(
+        body?.message ?? body?.error_message ?? (typeof body?.error === "string" ? body.error : null) ?? "Media upload failed"
+      );
+    }
+    const data: UploadedMedia = body.data ?? body;
+    const mediaKey = String(data?.mediaKey ?? "");
+    if (!mediaKey) {
+      throw new Error("Upload finished but the server returned no mediaKey");
+    }
+    const build = this.mediaUrlBuilder;
+    return {
+      error: false,
+      message: body.message,
+      data,
+      mediaKey,
+      url: build ? build(mediaKey, { withToken: false }) : "",
+      previewUrl: build ? build(mediaKey) : "",
+    };
+  }
+
+  /**
+   * The user groups (roles) a user belongs to, from the USERGROUPS search index —
+   * so an app never writes this Elasticsearch query itself.
+   * Defaults to the signed-in user. Cached per user for the client's lifetime;
+   * pass `refresh: true` to reload.
+   */
+  async getUserGroupsForUser(
+    userId?: number | string | null,
+    opts: { refresh?: boolean; size?: number } = {}
+  ): Promise<UserGroupMembership[]> {
+    const id = Number(userId ?? this.auth?.session?.userId);
+    if (!Number.isFinite(id) || id <= 0) return [];
+    if (!opts.refresh && this.membershipCache.has(id)) return this.membershipCache.get(id)!;
+
+    const domain = this.workspaceInstance?.businessDomain;
+    const query: any = {
+      query: {
+        bool: {
+          filter: domain ? { term: { _routing: domain } } : undefined,
+          must: [{ terms: { "userInfo.userID": [id] } }],
+        },
+      },
+      from: 0,
+      size: opts.size ?? 500,
+      track_total_hits: true,
+    };
+    if (!domain) delete query.query.bool.filter;
+    const payload = { ...USERGROUPS_INDEX, query };
+
+    const pending = this.handleRequest("post", API_URLS.elastic_search, payload, true)
+      .then((res: any) => {
+        const rows: any[] = res?.elements ?? res?.data?.elements ?? (Array.isArray(res) ? res : []);
+        const out: UserGroupMembership[] = [];
+        const seen = new Set<number>();
+        for (const r of rows) {
+          const src = r?._source ?? r;
+          const groupId = Number(src?.groupID ?? src?.groupId ?? src?.GroupID);
+          if (!Number.isFinite(groupId) || seen.has(groupId)) continue;
+          seen.add(groupId);
+          out.push({ groupId, title: String(src?.title ?? src?.Title ?? "") });
+        }
+        return out;
+      })
+      .catch((e: any) => {
+        this.membershipCache.delete(id);
+        throw e;
+      });
+    this.membershipCache.set(id, pending);
+    return pending;
+  }
+
+  /** Forget cached memberships (e.g. after an admin changes a user's roles). */
+  clearUserGroupCache(): void {
+    this.membershipCache.clear();
   }
 
   async getSingleSubmission(submissionId: string) {

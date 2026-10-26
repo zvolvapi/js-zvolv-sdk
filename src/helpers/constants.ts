@@ -92,7 +92,8 @@ export const API_URLS = {
   invoke_nuclio_automation: '/nuclio/function_invocations',
   submission_history: '/api/v1/submissions/history/:formSubmissionId',
   batch_submission: '/api/v1/submissions/batch',
-  media_upload: '/media/upload',
+  // Same endpoint as zvolv-web (createBifrostUrl('media/upload')).
+  media_upload: '/api/v1/media/upload',
   invoke_agent: '/zwall/agent/invoke/:flow_id/:agent_id',
 
   // Form runtime — added for parity with Angular zvolv-web z-form module.
@@ -133,6 +134,13 @@ export const VALKYRIE_TASK_API_URLS = {
   get_task: '/api/v1/tasks/:taskId',
   edit_task: '/api/v1/tasks',
 };
+
+// Search index that holds user-group memberships (one document per group member):
+// { groupID, title, userInfo: { userID, userName, profilePic } } — used by zvolv-web's getUsersQuery.
+export const USERGROUPS_INDEX = { indexType: 'USERGROUPS', indexKey: 'usergroups' };
+
+/** Max operations per /api/v1/submissions/batch call (zvolv-web sends 100 per request). */
+export const BATCH_SUBMISSION_CHUNK = 100;
 
 export const appVariables = {
   loginToken: 'loginToken',

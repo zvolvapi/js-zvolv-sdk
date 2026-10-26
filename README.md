@@ -34,29 +34,47 @@ Order matters: `workspace.init` → `auth.*` → everything else (`auth` throws 
 Inside a Zvolv-hosted app (`/v6/<app>/…`) the user is already signed in: use `auth.init()`; with no
 session, send the user to `/v5/login`.
 
-### The signed-in user (encrypted)
+### The signed-in user
 
-The session is stored encrypted (`enc::…`). Decrypt before reading any field:
+Read the user through `auth.session`; don't parse the stored user yourself.
 
 ```ts
-import { decryptAuthObject, decryptValue, readUserFromStorage, AUTH_CRYPT_READY_EVENT } from "@zestl/zvolv-js-sdk";
+const s = await client.auth.loadSession();   // waits for the server key, loads group memberships
+// s = { userId, name, email, role, isAdmin, groupId, groupIds, ready }
+if (s.isAdmin) { /* … */ }                   // true for "admin", "ADMIN", "Administrator", "Super Admin"
+widgetAccess({ isAdmin: s.isAdmin, groupIds: s.groupIds });
 
-const u: any = decryptAuthObject(client.auth.userInstance);
-const role = String(u.profile?.role_details?.role ?? u.role ?? "").toLowerCase();   // "admin" | "builder" | …
-const isAdmin = role === "admin";
-const userId = Number(u.id ?? u.user_id ?? u.profile?.id);          // what people fields store: [userId]
-const groupId = Number(u.userGroupId ?? u.profile?.userGroupId);    // the user's own user group
+client.auth.session;   // synchronous snapshot — fields still encrypted are empty and ready === false
+await client.auth.ready();   // resolves once stored values can be decrypted (≤ 8 s, never rejects)
 ```
 
-Values encrypted with the server key can be read only after the SDK has fetched it; it fires
-`window` event `AUTH_CRYPT_READY_EVENT` (`"zvAuthCryptReady"`) then. Re-read the user on that event.
+`groupId` is the user's own user group; `groupIds` is that group plus every group the user is a
+member of (`workflow.getUserGroupsForUser`, see below).
+
+#### How the stored session is encrypted
+
+The session in `localStorage` mixes encrypted and plain fields, depending on when it was written:
+
+| Value | Key | Readable |
+| --- | --- | --- |
+| plain text / number | — | always (returned unchanged) |
+| `enc::d::…` (loginToken, sharedToken, and PII written before the server key arrived) | this browser's device key | immediately |
+| `enc::s::…` (email, name, role, userId, userGroupId) | server key `AUTH_CRYPT` from `organisation/auth/data` | after `auth.ready()` |
+| `enc::…` without a tag (older data) | server key, then device key | best effort |
+
+`decryptValue(v)` / `decryptAuthObject(obj)` follow that table: a value that is already readable
+comes back unchanged, a value whose key isn't loaded yet comes back as the `enc::…` string. Use
+`isReadable(v)` to tell, or await `auth.ready()` first. The SDK also fires `window` event
+`AUTH_CRYPT_READY_EVENT` (`"zvAuthCryptReady"`) when the key arrives. On a page reload the server
+key is fetched again, so right after `auth.init()` the `s::` fields are not readable yet — that
+is why a signed-in admin could briefly look like a nameless member; `loadSession()` waits for it.
 
 ## Role-based access
 
 | What | Where it lives | How to check |
 | --- | --- | --- |
-| Admin | the user's `profile.role_details.role === "admin"` | decrypt the user (above) |
-| User group (role) | `userGroupId`; roles are user groups | `workflow.getUserGroup`, `workflow.getUserGroupList` |
+| Admin | the user's `profile.role_details.role` (`admin`, `ADMIN`, `Administrator`…) | `auth.session.isAdmin` |
+| User group (role) | `userGroupId`; roles are user groups; a user can be a member of several | `auth.session.groupIds`, `workflow.getUserGroupsForUser()` |
 | Who can open a dashboard | dashboard `ViewPerm` / `EditPerm` (user-group ids, `-1` = everyone); `getDashboards` also returns per-user `permissions` (`VIEW_PERMISSION`, `EDIT_PERMISSION`) | admins see all; else `permissions` holds VIEW or EDIT (a `HideInMobileApp: "YES"` dashboard needs EDIT). `@zestl/zvolv-widgets` has `canViewDashboard` / `visibleDashboardTree` |
 | Who can edit a zapp | the zapp's permissions | `workflow.checkPermissions(zappId, ["EDIT_WORKFLOW_TYPE"])` → the granted ops |
 | Who can submit / edit a form | the form's role lists (server-enforced) | the submission call fails with the server's message: show it |
@@ -95,6 +113,84 @@ expects (element ids, lookups, people, files, sheets, formulas).
 Other form calls on `client.workflow`: `getSingleForm`, `getZappForms(zappId)`, `getAllForm`,
 `getSingleSubmission`, `getSubmissionAll`, `getSubmissionHistory`, `batchSubmission`,
 `mediaUpload`, `getFormSubmissionFieldValues`, `getFieldDistinctValues`.
+
+### Many records at once: `batchSubmission`
+
+The supported way to create or update many records in one go (zvolv-web's sheet / table widget uses
+it). Don't hand-write `/api/v1/submissions/batch`.
+
+```ts
+const { submissionIds } = await client.workflow.batchSubmission({
+  operations: [
+    { operation: "CREATE", formId, elements: [{ label: "Name", value: "A" }] },
+    { operation: "UPDATE", formId, submissionId, elements: [{ label: "Name", value: "B" }] },
+  ],
+});   // second argument skipSyncRequest, default true
+```
+
+- `elements` is the same array a single `submission.create` sends. A `CREATE` can carry
+  `parentFormSubmissionId` to attach the new record to a parent (sheet / table rows).
+- The SDK sends 100 operations per request, in order, and returns every id.
+- On failure it throws `BatchSubmissionError`: `message` is the server's reason,
+  `operationIndex` the 0-based position of the refused operation in your list (the server reports
+  it as `"<reason> operation : N"`), `savedSubmissionIds` what earlier requests already saved.
+
+## Files (media)
+
+```ts
+const res = await client.workflow.mediaUpload(file, {
+  zappId,                                        // optional (?zapid=)
+  onProgress: ({ loaded, total, percent }) => setPct(percent),
+  signal: controller.signal,                     // optional AbortController signal
+});
+// res = { error: false, data, mediaKey, url, previewUrl }
+field.value = [res.data];                        // store `data` as-is (what zvolv-web stores)
+img.src = res.previewUrl;                        // show now
+
+client.mediaUrl(mediaKeyOrFile);                 // URL of a stored file, from its mediaKey
+client.mediaUrl(file, { withToken: true });      // + ?jwt=… for PRIVATE workspaces
+```
+
+**Contract**
+
+- Endpoint: `POST /api/v1/media/upload`, multipart, the file under `"file"` (same as zvolv-web).
+  Pass a `File`/`Blob`, or a `FormData` that already holds it. `mediaUpload(formData, zappId)` still works.
+- Progress comes from the browser's own XHR upload events (axios `onUploadProgress`), so you get
+  real `progress` → `load` → `loadend`. Don't wrap or replace `XMLHttpRequest`: a shim that calls
+  `onload` itself instead of dispatching `load`/`loadend`/`progress` makes the upload hang without an error.
+- The promise resolves only after the server answers `error: false` **with a `mediaKey`**. It
+  rejects with the server's own message otherwise, or with an `AbortError` when `signal` fires. A
+  resolved upload has been stored — don't retry it.
+- The response has no `media` URL. Build it from `mediaKey` with `client.mediaUrl` (or use
+  `res.url` / `res.previewUrl`): `{origin}/media/{businessDomain}/{mediaKey}`.
+- `url` carries no token and is safe to store. `previewUrl` adds `?jwt=` when the workspace's
+  `config.json` has `AUTHENTICATION: "PRIVATE"` (`fromConfig` reads it into `client.privateMedia`);
+  don't store it.
+
+**Limits**
+
+- Refused extensions: `BLOCKED_UPLOAD_EXTENSIONS` (exported), including executables, scripts and
+  installers (`exe`, `js`, `sh`, `php`, `msi`…), disk images (`iso`, `vhd`), archives `zip`, `bz2`,
+  `z`, `ace`, `cab`, and macro/add-in Office types (`xlam`, `ppam`, `xlm`…). **`.zip` is refused by
+  the media API.** `mediaUpload` checks this first and throws without sending; `isBlockedUpload(name)`
+  lets a picker check earlier.
+- Everything not on that list is let through by the client, as in zvolv-web: images, PDF,
+  Word/Excel/PowerPoint (`docx`, `xlsx`, `pptx`, `doc`, `xls`, `ppt`), `csv`, text, audio and video.
+  The server can still refuse a file (size, type); `mediaUpload` then rejects with its message.
+- Per field, the form element's `attributes` narrow this further: `allowedFileTypes` (an `accept`
+  string, `*/*` = any), `allowedFileCount` (0 = unlimited) and `allowedFileMaxSize` (in **KB**,
+  0 = unlimited). `@zestl/zvolv-widgets` applies them; check them yourself in a custom picker.
+- Legacy file fields with a `cardID` (`UPLOAD_FILE_IMAGE`) use `dbFileUpload` instead.
+
+## User groups
+
+```ts
+const groups = await client.workflow.getUserGroupsForUser();     // the signed-in user's groups
+// [{ groupId, title }] — or getUserGroupsForUser(userId), { refresh: true } to bypass the cache
+```
+
+It reads the `USERGROUPS` search index (`userInfo.userID` → `groupID`), cached per user. Apps
+should not write that query themselves. `auth.loadSession()` uses it for `groupIds`.
 
 ## Search and analytics
 
@@ -149,6 +245,25 @@ tsx --no-cache ./sample.ts
 
 MIT. See [LICENSE](https://github.com/zvolvapi/js-zvolv-sdk/blob/main/LICENSE).
 
+
+## Changes in 1.2.0
+
+- **Decryption**: `decryptValue` / `decryptAuthObject` document and test that readable values come
+  back unchanged; untagged `enc::…` values are decrypted (server key, then device key); new
+  `isReadable`, `hasEncryptedFields`, `mergeReadable`. `auth.init()` never replaces a readable
+  in-memory field with ciphertext from storage; the `AUTH_CRYPT` fetch retries transient errors.
+- **Session**: `auth.ready()`, `auth.session` and `auth.loadSession()` give `{ userId, name, email,
+  role, isAdmin, groupId, groupIds, ready }`; `isAdmin` accepts `admin` / `ADMIN` / `Administrator` /
+  `Super Admin`. `isAdminRole`, `normalizeRole`, `buildSession` exported.
+- **Media**: `client.mediaUrl(ref, { withToken })`, `buildMediaUrl`; `fromConfig` reads
+  `AUTHENTICATION` into `client.privateMedia`.
+- **Upload**: `mediaUpload(file | formData, { zappId, onProgress, signal })` uses
+  `POST /api/v1/media/upload` (was `/media/upload`), reports real progress, resolves with
+  `{ data, mediaKey, url, previewUrl }`, rejects with the server's message or when no `mediaKey`
+  comes back, and refuses blocked extensions (incl. `.zip`) before sending.
+- **User groups**: `workflow.getUserGroupsForUser(userId?)`.
+- **Batch**: `batchSubmission` is typed, validated, chunked by 100, returns `{ submissionIds }` and
+  throws `BatchSubmissionError` with `operationIndex`.
 
 ## Changes in 1.1.0
 

@@ -84,6 +84,20 @@ export const encryptPii = (value: any): any => {
     : encryptWith(value, getDeviceKey(), TAG_D);
 };
 
+/**
+ * Decrypts one stored session value.
+ *
+ * Contract:
+ * - A value that is already readable (plain string, number, boolean, null, object)
+ *   is returned unchanged. The stored session mixes `enc::…` and plain fields
+ *   depending on when it was last written, so callers can run every field through this.
+ * - `enc::d::…` is decrypted with this browser's device key.
+ * - `enc::s::…` is decrypted with the server key (AUTH_CRYPT). Until that key has been
+ *   fetched the ciphertext is returned unchanged — check `isReadable()` or await
+ *   `client.auth.ready()` before relying on such a field.
+ * - Untagged `enc::…` (older data) is tried with the server key, then the device key
+ *   (same as zvolv-web's EncryptionService).
+ */
 export function decryptValue(value: any): any {
   if (typeof value !== "string" || !value.startsWith(PREFIX)) return value;
   const body = value.slice(PREFIX.length);
@@ -97,11 +111,50 @@ export function decryptValue(value: any): any {
     const plain = tryDecrypt(body.slice(TAG_S.length), key);
     return plain !== null ? plain : value;
   }
+  // Legacy untagged ciphertext: best effort with both keys.
+  const server = getServerKey();
+  if (server) {
+    const plain = tryDecrypt(body, server);
+    if (plain !== null) return plain;
+  }
+  const device = getDeviceKey();
+  if (device) {
+    const plain = tryDecrypt(body, device);
+    if (plain !== null) return plain;
+  }
   return value;
 }
 
 export const isEncryptedValue = (value: any): boolean =>
   typeof value === "string" && value.startsWith(PREFIX);
+
+/** True when a value can be shown or compared as-is (it is not, or no longer, `enc::…`). */
+export const isReadable = (value: any): boolean => !isEncryptedValue(value);
+
+/** True when any field of an object (deeply) is still `enc::…`. */
+export function hasEncryptedFields(node: any): boolean {
+  if (Array.isArray(node)) return node.some(hasEncryptedFields);
+  if (node && typeof node === "object") return Object.values(node).some(hasEncryptedFields);
+  return isEncryptedValue(node);
+}
+
+/**
+ * Field-by-field merge of two copies of the same user: a readable value in either
+ * copy wins over ciphertext, so a plain in-memory field is never replaced by an
+ * `enc::…` one read back from storage.
+ */
+export function mergeReadable<T>(primary: T, fallback: any): T {
+  if (fallback === undefined || fallback === null) return primary;
+  if (primary === undefined || primary === null) return fallback;
+  if (Array.isArray(primary)) return primary;
+  if (typeof primary === "object" && typeof fallback === "object" && !Array.isArray(fallback)) {
+    const out: Record<string, any> = { ...fallback };
+    for (const [k, v] of Object.entries(primary as any)) out[k] = mergeReadable(v, (fallback as any)[k]);
+    return out as T;
+  }
+  if (isEncryptedValue(primary) && !isEncryptedValue(fallback)) return fallback;
+  return primary;
+}
 
 function walkObject(
   node: any,

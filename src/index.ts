@@ -2,6 +2,12 @@ import axios, { AxiosInstance } from "axios";
 import AuthModule from "./modules/auth";
 
 export * from "./helpers/crypto";
+export * from "./helpers/media";
+export * from "./helpers/batch";
+export { normalizeRole, isAdminRole, buildSession } from "./helpers/session";
+export type { Session, User, UserGroupMembership } from "./interfaces/auth.interface";
+export type { BatchOperation, BatchSubmissionResult } from "./interfaces/submission.interface";
+import { buildMediaUrl, MediaRef } from "./helpers/media";
 import WorkspaceModule from "./modules/workspace";
 import AnalyticsModule from "./modules/analytics";
 import FormModule from "./modules/forms";
@@ -20,6 +26,12 @@ export class ZvolvClient {
   private _zaiServices?: ZaiServicesModule;
 
   private sessionGuardInstalled = false;
+
+  /**
+   * True on workspaces whose config.json has AUTHENTICATION "PRIVATE": media URLs then
+   * need ?jwt=<token> to load (zvolv-web getMediaURL). Set by fromConfig, or by hand.
+   */
+  privateMedia = false;
 
   /**
    * @param host  The API host ("acme.zvolv.in") or a full origin ("https://acme.zvolv.in").
@@ -43,7 +55,13 @@ export class ZvolvClient {
    * HOST is the workspace API host; when it is empty the current page's origin is used
    * (browser only), so a build served from the workspace calls its own domain.
    */
-  static fromConfig(cfg: { HOST?: string; PROTOCOL?: string; DOMAIN?: string }): ZvolvClient {
+  static fromConfig(cfg: { HOST?: string; PROTOCOL?: string; DOMAIN?: string; AUTHENTICATION?: string }): ZvolvClient {
+    const client = ZvolvClient.clientFromConfig(cfg);
+    client.privateMedia = String(cfg?.AUTHENTICATION ?? "").toUpperCase() === "PRIVATE";
+    return client;
+  }
+
+  private static clientFromConfig(cfg: { HOST?: string; PROTOCOL?: string; DOMAIN?: string }): ZvolvClient {
     const host = String(cfg?.HOST ?? "").trim();
     if (host) return new ZvolvClient(host, (cfg.PROTOCOL ?? "https://").startsWith("https"));
     if (typeof window !== "undefined" && window.location?.host) {
@@ -51,6 +69,27 @@ export class ZvolvClient {
     }
     if (cfg?.DOMAIN) return new ZvolvClient(`${cfg.DOMAIN}.zvolv.in`, true);
     throw new Error("ZvolvClient.fromConfig: HOST (or DOMAIN) is required");
+  }
+
+  /**
+   * URL of an uploaded file: {origin}/media/{businessDomain}/{mediaKey}.
+   * `ref` is a mediaKey, a stored file object ({ mediaKey, … }) or a full URL (returned
+   * as-is). `withToken` (default: privateMedia) appends ?jwt=<token> for PRIVATE
+   * workspaces — use that URL to display now, not to store. Needs workspace.init().
+   */
+  mediaUrl(ref: MediaRef, opts: { withToken?: boolean } = {}): string {
+    const domain = this._workspace?.workspaceInstance?.businessDomain ?? "";
+    const withToken = opts.withToken ?? this.privateMedia;
+    const token = withToken ? this._auth?.token || this.tryAuth()?.token || "" : "";
+    return buildMediaUrl(this.baseURL, domain, ref, token || null);
+  }
+
+  private tryAuth() {
+    try {
+      return this._workspace?.workspaceInstance ? this.auth : undefined;
+    } catch {
+      return undefined;
+    }
   }
 
   /** The origin every request goes to. */
@@ -78,6 +117,7 @@ export class ZvolvClient {
         this.httpClient,
         this._workspace.workspaceInstance
       );
+      this._auth.setMembershipLoader((userId) => this.workflow.getUserGroupsForUser(userId));
     }
     return this._auth;
   }
@@ -120,7 +160,8 @@ export class ZvolvClient {
       this._workflow = new WorkflowModule(
         this.httpClient,
         this._workspace?.workspaceInstance,
-        this.auth
+        this.auth,
+        (ref, opts) => this.mediaUrl(ref, opts)
       );
     }
     return this._workflow;

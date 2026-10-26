@@ -36,3 +36,19 @@ export interface SubmissionQueryParams {
     skipValidations?: boolean;
     isDraft?: boolean;
 }
+
+/** One record write inside workflow.batchSubmission. */
+export type BatchOperation =
+    | {
+          operation: "CREATE";
+          formId: string;
+          elements: CreateSubmissionElementDto[] | any[];
+          /** Links the new record to a parent record (sheet / table rows). */
+          parentFormSubmissionId?: string;
+      }
+    | { operation: "UPDATE"; formId: string; submissionId: string; elements: CreateSubmissionElementDto[] | any[] };
+
+export interface BatchSubmissionResult {
+    /** Ids of the records created/updated, in the order the server returned them. */
+    submissionIds: string[];
+}
