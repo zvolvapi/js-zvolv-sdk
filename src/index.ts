@@ -7,6 +7,23 @@ export * from "./helpers/batch";
 export { normalizeRole, isAdminRole, buildSession } from "./helpers/session";
 export type { Session, User, UserGroupMembership } from "./interfaces/auth.interface";
 export type { BatchOperation, BatchSubmissionResult } from "./interfaces/submission.interface";
+export { ZaiApiError } from "./interfaces/budget.interface";
+export type {
+  BudgetScope,
+  BudgetPeriod,
+  BudgetLimitType,
+  BudgetOnLimit,
+  BudgetReportPeriod,
+  BudgetUserStatus,
+  BudgetLimit,
+  BudgetRule,
+  BudgetRuleInput,
+  BudgetTopupInput,
+  BudgetResetInput,
+  BudgetReportQuery,
+  BudgetHistoryQuery,
+  BudgetMargin,
+} from "./interfaces/budget.interface";
 import { buildMediaUrl, MediaRef } from "./helpers/media";
 import WorkspaceModule from "./modules/workspace";
 import AnalyticsModule from "./modules/analytics";

@@ -1,6 +1,6 @@
 {
   "name": "@zestl/zvolv-js-sdk",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Zvolv developer kit for Javascript",
   "exports": {
     ".": {
